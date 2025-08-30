@@ -2,312 +2,390 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>КЛАДОВАЯ • Библиотека</title>
 <style>
   :root{
-    --bg:#FAFAFA; --text:#111; --muted:#666; --accent:#7A5DFF;
-    --card:#fff; --border:#e6e6e8; --shadow:0 6px 24px rgba(0,0,0,.06);
-    --radius:16px; --space:14px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  }
-  [data-theme="dark"]{
-    --bg:#121315; --text:#F6F7FB; --muted:#B0B3BD; --accent:#7A9BFF;
-    --card:#1A1C1F; --border:#2A2D33; --shadow:none;
+    --bg:#0f1114; --text:#e9ecf1; --muted:#a6acb4;
+    --card:#15181d; --border:#232830; --accent:#7A9BFF; --accent-2:#56e39f;
+    --shadow: 0 8px 24px rgba(0,0,0,.30);
+    --radius:16px; --space:16px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --content-w: 860px;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.6 system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,"Noto Sans",sans-serif;}
+  body{margin:0;background:linear-gradient(180deg,#0e1013,#12161c);color:var(--text);font:400 16px/1.65 system-ui,-apple-system,Inter,Segoe UI,Roboto,Arial,"Noto Sans",sans-serif;-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
-  .toolbar{
-    position:sticky;top:0;z-index:10;backdrop-filter:saturate(1.2) blur(10px);
-    background:color-mix(in oklab, var(--card) 85%, transparent);
-    border-bottom:1px solid var(--border);
+  .wrap{max-width:1100px;margin:0 auto;padding:var(--space)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.2px}
+  .brand svg{width:22px;height:22px}
+  .hero{
+    display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;margin:10vh 0 24px;
   }
-  .toolbar-inner{max-width:1200px;margin:0 auto;display:flex;gap:10px;align-items:center;padding:10px var(--space)}
-  .logo{display:flex;align-items:center;gap:10px;font-weight:700}
-  .logo svg{width:22px;height:22px}
-  .spacer{flex:1}
-  .toggle{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:var(--card)}
-  main{max-width:1200px;margin:0 auto;padding:var(--space)}
-  .layout{display:grid;grid-template-columns:280px 1fr;gap:var(--space)}
+  .hero h1{margin:0;font-size:28px}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  .btn{
+    appearance:none;border:1px solid var(--border);background:var(--card);color:var(--text);
+    padding:12px 16px;border-radius:14px;cursor:pointer;box-shadow:var(--shadow);transition:.15s transform;
+    font-weight:600;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:#0d1222;border-color:transparent}
+  .btn-ghost{background:transparent}
   .panel{
     background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
   }
-  .panel .hd{padding:12px var(--space);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-  .panel .hd .title{font-weight:700}
-  .panel .bd{padding:12px var(--space)}
+  .hd{padding:12px var(--space);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .title{font-weight:700}
+  .bd{padding:12px var(--space)}
   .muted{color:var(--muted)}
-  .booklist{display:grid;gap:10px}
-  .book{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--card);cursor:pointer}
-  .book:hover{outline:2px solid color-mix(in oklab, var(--accent) 28%, transparent)}
-  .book .meta{font-size:13px;color:var(--muted)}
-  .toc{display:block;margin:0;padding:0;list-style:none}
-  .toc li{margin:4px 0}
-  .toc button{
-    width:100%;text-align:left;border:1px solid var(--border);background:var(--card);color:inherit;
-    padding:8px 10px;border-radius:10px;cursor:pointer;
+  .list{display:grid;gap:10px}
+  .item{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:12px;background:#0f1319;cursor:pointer}
+  .item:hover{outline:2px solid color-mix(in oklab, var(--accent) 35%, transparent)}
+  .meta{font-size:13px;color:var(--muted)}
+  .hidden{display:none!important}
+  .grid{display:grid;gap:var(--space);grid-template-columns: 1fr 1fr}
+  @media (max-width: 920px){ .grid{grid-template-columns:1fr} .hero h1{font-size:24px} }
+
+  /* ЧТЕНИЕ */
+  .reader-shell{
+    position:fixed; inset:0; z-index:20; background:#0c0f13; display:none; /* shown when reading */
   }
-  .toc button:hover{border-color:color-mix(in oklab, var(--accent) 35%, var(--border))}
-  .content{min-height:60vh}
-  .content h1{margin:0 0 6px;font-size:22px}
-  .content .chapter-pos{font:500 12px/1 var(--mono);color:var(--muted);margin-bottom:14px}
-  .content p{margin:0 0 1em}
-  .content pre, .content code{font-family:var(--mono)}
-  .empty{padding:16px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);background:color-mix(in oklab, var(--card) 80%, transparent)}
-  .pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;background:color-mix(in oklab, var(--accent) 14%, transparent);color:inherit;border:1px solid var(--border);font-size:12px}
-  .footer{max-width:1200px;margin:24px auto;padding:0 var(--space);color:var(--muted);font-size:13px}
-  @media (max-width:860px){
-    .layout{grid-template-columns:1fr}
-    .panel .bd{padding:10px}
+  .reader{max-width:var(--content-w); margin:0 auto; padding: min(5vh,40px) var(--space); }
+  .reader h1{margin:0 0 8px; font-size: clamp(20px, 2.2vw, 30px)}
+  .pos{font:500 12px/1 var(--mono); color:var(--muted); margin-bottom:14px}
+  .reader .body p{margin:0 0 1.1em}
+  .reader .body{font-size: var(--fs, 18px); line-height: var(--lh, 1.7)}
+  .toolbar-fab{
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    display:flex; gap:10px; align-items:center; z-index:30;
+    background: color-mix(in oklab, #0c0f13 40%, transparent); backdrop-filter: blur(8px);
+    border:1px solid var(--border); padding:8px 10px; border-radius:999px; box-shadow:var(--shadow);
   }
+  .fab-btn{border:1px solid var(--border); background:#0f1319; color:var(--text); padding:10px 12px; border-radius:12px; font-weight:700; cursor:pointer}
+  .fab-btn.primary{background:var(--accent); color:#0e1530; border-color: transparent}
+  .fab-btn:active{transform:translateY(1px)}
+  .fab-hide{position: fixed; right: 14px; bottom: 14px; z-index:31}
+  .hint{position: fixed; top: 10px; left: 50%; transform: translateX(-50%); font-size:12px; color:var(--muted)}
+  .reader-shell.hide-ui .toolbar-fab, .reader-shell.hide-ui .fab-hide{ display:none; }
+
+  /* карточки оглавления в списке глав */
+  .toc{display:grid;gap:10px}
+  .toc .item{background:#0f1319}
+  .badge{display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px;
+    background:color-mix(in oklab, var(--accent) 18%, transparent); color:#0e1530; font-weight:700; border:1px solid var(--border); font-size:12px}
+
+  .empty{padding:16px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);background:#0d1116}
 </style>
 </head>
 <body>
-  <header class="toolbar" role="banner" aria-label="Верхняя панель">
-    <div class="toolbar-inner">
-      <div class="logo">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H9l-5 3V7Z" stroke="currentColor" stroke-width="1.5"/></svg>
-        <span>КЛАДОВАЯ • Библиотека</span>
+  <div class="wrap">
+    <div class="brand" style="margin-top:10px">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H9l-5 3V7Z" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span>КЛАДОВАЯ • Библиотека</span>
+    </div>
+
+    <!-- Стартовый экран -->
+    <section id="screen-home" class="hero">
+      <h1>Читай книги из коллекции</h1>
+      <div class="muted">Ваши JSON-файлы подгружаются прямо в приложение. Загрузки пользователем отключены.</div>
+      <div class="cta">
+        <button id="btnPickBook" class="btn btn-primary">Выбрать книгу</button>
+        <button id="btnContinue" class="btn">Продолжить чтение</button>
       </div>
-      <div class="spacer"></div>
-      <label class="toggle" title="Тема">
-        <input id="themeToggle" type="checkbox" aria-label="Тёмная тема">
-        <span class="muted">Тёмная тема</span>
-      </label>
+    </section>
+
+    <!-- Список книг -->
+    <section id="screen-books" class="panel hidden" aria-labelledby="books-h">
+      <div class="hd"><div class="title" id="books-h">Книги</div></div>
+      <div class="bd">
+        <div id="bookList" class="list"></div>
+        <div id="noBooks" class="empty hidden">Нет книг. Добавьте пути в <b>BOOK_SOURCES</b> или файл <b>library.json</b> в корне.</div>
+      </div>
+    </section>
+
+    <!-- Список глав -->
+    <section id="screen-chapters" class="panel hidden" aria-labelledby="chap-h">
+      <div class="hd">
+        <div class="title" id="chap-h">Главы</div>
+        <span id="bookBadge" class="badge" style="margin-left:10px; display:none"></span>
+        <div class="spacer" style="flex:1"></div>
+        <button id="btnBackBooks" class="btn btn-ghost">← К книгам</button>
+      </div>
+      <div class="bd">
+        <div id="chaptersList" class="toc"></div>
+        <div id="noChapters" class="empty hidden">В этом JSON нет массива <b>chapters</b>.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Полноэкранное чтение -->
+  <div id="readerShell" class="reader-shell" role="dialog" aria-modal="true">
+    <div class="hint muted" id="hint">Двойной тап — показать/скрыть панель</div>
+    <div id="reader" class="reader" role="document" aria-live="polite">
+      <h1 id="hTitle">—</h1>
+      <div id="hPos" class="pos">—</div>
+      <div id="hBody" class="body"></div>
     </div>
-  </header>
 
-  <main role="main">
-    <div class="layout">
-      <!-- Левая колонка: книги + оглавление -->
-      <section class="panel" aria-labelledby="lib-h">
-        <div class="hd"><div class="title" id="lib-h">Библиотека</div></div>
-        <div class="bd">
-          <div id="books" class="booklist"></div>
-          <div id="booksEmpty" class="empty hidden">Нет книг. Добавьте пути к вашим JSON-файлам в массив <b>BOOK_SOURCES</b> или используйте <b>library.json</b> в корне репозитория.</div>
-
-          <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-
-          <div class="title" style="margin-bottom:8px">Оглавление</div>
-          <ul id="toc" class="toc"></ul>
-          <div id="tocEmpty" class="empty">Выберите книгу, чтобы увидеть главы.</div>
-        </div>
-      </section>
-
-      <!-- Правая колонка: контент главы -->
-      <section class="panel" aria-labelledby="content-h">
-        <div class="hd"><div class="title" id="content-h">Текст главы</div> <span id="badge" class="pill" style="margin-left:10px;display:none"></span></div>
-        <div class="bd content" id="content">
-          <div class="empty">Нажмите на главу слева, чтобы открыть текст.</div>
-        </div>
-      </section>
+    <!-- Плавающие кнопки -->
+    <div class="toolbar-fab" id="fab">
+      <button id="btnPrev" class="fab-btn">⟨</button>
+      <button id="btnSmaller" class="fab-btn">A−</button>
+      <button id="btnBigger" class="fab-btn">A+</button>
+      <button id="btnNext" class="fab-btn">⟩</button>
+      <button id="btnCloseReader" class="fab-btn primary">Закрыть</button>
     </div>
-  </main>
-
-  <div class="footer">Файлы читаются прямо в приложении. Пользовательские загрузки отключены.</div>
+    <button id="btnHideUI" class="fab-btn fab-hide">Скрыть панель</button>
+  </div>
 
 <script>
 ;(()=>{
-  /* ========= НАСТРОЙКА ИСТОЧНИКОВ =========
-     Вариант A: перечислите файлы здесь.
-     Пример: { title:"Откровение №1", url:"./otkrovenie_1.json" }
-     Вариант B: положите рядом library.json: [{ "title": "...", "url": "./path.json" }, ...]
-  ========================================= */
+  /* ====== ИСТОЧНИКИ ======
+     Вариант А: перечислите JSON здесь.
+     Вариант Б: положите /library.json вида:
+       [{ "title":"...", "url":"./otkrovenie_1.json" }, ...]
+  ======================== */
   const BOOK_SOURCES = [
-    { title: "Откровение №1", url: "./otkrovenie_1.json" } // ← добавляйте сюда следующие файлы
-    // { title: "Откровение №2", url: "./otkrovenie_2.json" },
+    { title: "Откровение №1", url: "./otkrovenie_1.json" }
+    // { title: "Откровение №2", url: "./otkrovenie_2.json" }
   ];
-  const TRY_LIBRARY_JSON = true; // попытается подхватить /library.json, если он есть
+  const TRY_LIBRARY_JSON = true;
 
-  /* --------------- УТИЛИТЫ --------------- */
+  /* ====== УТИЛИТЫ / СОСТОЯНИЕ ====== */
   const $ = (s, r=document)=>r.querySelector(s);
-  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
   const escapeHtml = (s='')=> s.replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-  const byId = new Map(); // content_id → книга
-  let currentBook = null;
+  const state = {
+    books: [],
+    currentBook: null,
+    currentChapter: -1,
+    fontSize: +(localStorage.getItem('reader.fs')||18),
+  };
+  const persist = {
+    setLast(bookId, chIdx){ localStorage.setItem('last.read', JSON.stringify({bookId, chIdx})); },
+    getLast(){ try{ return JSON.parse(localStorage.getItem('last.read')||''); }catch{return null} }
+  };
 
-  // Тема
-  const themeToggle = $('#themeToggle');
-  const savedTheme = localStorage.getItem('theme') || 'light';
-  document.body.setAttribute('data-theme', savedTheme==='dark'?'dark':'light');
-  themeToggle.checked = savedTheme==='dark';
-  themeToggle.addEventListener('change', ()=>{
-    const v = themeToggle.checked?'dark':'light';
-    document.body.setAttribute('data-theme', v);
-    localStorage.setItem('theme', v);
-  });
-
-  /* ---------- ЗАГРУЗКА КНИГ ---------- */
+  /* ====== ЗАГРУЗКА КНИГ ====== */
   async function loadBooks(){
     let list = [...BOOK_SOURCES];
     if (TRY_LIBRARY_JSON){
       try{
-        const res = await fetch('./library.json', {cache:'no-store'});
-        if (res.ok){
-          const extra = await res.json();
-          if (Array.isArray(extra)) list = extra.concat(list);
+        const r = await fetch('./library.json', {cache:'no-store'});
+        if (r.ok){
+          const lj = await r.json();
+          if (Array.isArray(lj)) list = lj.concat(list);
         }
-      }catch{/* игнор */}
+      }catch{/* ignore */}
     }
-    // Уникализировать по URL
-    const seen = new Set(); list = list.filter(x=>{ if(!x?.url) return false; if (seen.has(x.url)) return false; seen.add(x.url); return true; });
+    // Уникализация по url
+    const seen = new Set();
+    list = list.filter(x=>x?.url && !seen.has(x.url) && seen.add(x.url));
 
-    const books = [];
+    const out = [];
     for (const row of list){
       try{
         const res = await fetch(row.url, {cache:'no-store'});
         if (!res.ok) throw new Error('http '+res.status);
         const json = await res.json();
-        books.push(normalize(json, row));
+        out.push(normalize(json, row));
       }catch(e){
         console.warn('Не удалось загрузить', row.url, e);
       }
     }
-    return books;
+    state.books = out;
   }
 
   function normalize(json, src){
-    // Поддерживаем несколько вариантов поля с главами и текстом
-    // ожидаемые поля:
-    //   content_id: string
-    //   title: string
-    //   pages?: number
-    //   chapters: [{ title, start_page?, content?, subsections?: [{ title, start_page?, content? }] }]
     const title = json.title || json.book_title || src.title || 'Без названия';
     const id = json.content_id || ('auto-'+Math.random().toString(36).slice(2));
-    const chapters = Array.isArray(json.chapters) ? json.chapters : [];
-
-    // Гарантируем минимальные поля глав
-    const safeChapters = chapters.map((ch, i)=>({
-      idx: i,
+    const chapters0 = Array.isArray(json.chapters) ? json.chapters : [];
+    const chapters = chapters0.map((ch,i)=>({
+      idx:i,
       title: ch?.title || `Глава ${i+1}`,
       start_page: ch?.start_page ?? null,
-      content: typeof ch?.content === 'string' ? ch.content : (Array.isArray(ch?.paragraphs) ? ch.paragraphs.join('\n\n') : null),
+      content: textFrom(ch),
       subsections: Array.isArray(ch?.subsections) ? ch.subsections.map((s,j)=>({
-        idx: j,
-        title: s?.title || `Раздел ${i+1}.${j+1}`,
-        start_page: s?.start_page ?? null,
-        content: typeof s?.content === 'string' ? s.content : (Array.isArray(s?.paragraphs) ? s.paragraphs.join('\n\n') : null)
+        idx:j, title: s?.title || `Раздел ${i+1}.${j+1}`, start_page: s?.start_page ?? null, content: textFrom(s)
       })) : []
     }));
-
-    const book = {
-      content_id: id,
-      title,
-      pages: json.pages ?? null,
-      chapters: safeChapters,
-      source_url: src.url
-    };
-    byId.set(id, book);
-    return book;
+    return { content_id:id, title, pages: json.pages??null, chapters, source_url:src.url };
+  }
+  function textFrom(node){
+    if (!node) return null;
+    if (typeof node.content === 'string') return node.content;
+    if (Array.isArray(node.paragraphs)) return node.paragraphs.join('\n\n');
+    return null;
   }
 
-  /* ---------- РЕНДЕР ЛЕВОЙ КОЛОНКИ ---------- */
-  function renderBooks(books){
-    const host = $('#books');
-    host.innerHTML = '';
-    if (!books.length){ $('#booksEmpty').classList.remove('hidden'); return; }
-    $('#booksEmpty').classList.add('hidden');
+  /* ====== ЭКРАНЫ ====== */
+  const home = $('#screen-home');
+  const screenBooks = $('#screen-books');
+  const screenChapters = $('#screen-chapters');
 
-    books.forEach(b=>{
+  function showHome(){
+    home.classList.remove('hidden');
+    screenBooks.classList.add('hidden');
+    screenChapters.classList.add('hidden');
+  }
+  function showBooks(){
+    home.classList.add('hidden');
+    screenBooks.classList.remove('hidden');
+    screenChapters.classList.add('hidden');
+  }
+  function showChapters(){
+    home.classList.add('hidden');
+    screenBooks.classList.add('hidden');
+    screenChapters.classList.remove('hidden');
+  }
+
+  /* ====== РЕНДЕР СПИСКОВ ====== */
+  function renderBooks(){
+    const host = $('#bookList'); host.innerHTML = '';
+    $('#noBooks').classList.toggle('hidden', !!state.books.length);
+    state.books.forEach(b=>{
       const el = document.createElement('button');
-      el.className = 'book';
+      el.className = 'item';
       el.innerHTML = `
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(b.title)}</div>
+          <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(b.title)}</div>
           <div class="meta">глав: ${b.chapters.length}${b.pages?` • стр. ${b.pages}`:''}</div>
         </div>
       `;
-      el.addEventListener('click', ()=>{ currentBook = b; renderTOC(b); clearContent(); });
+      el.addEventListener('click', ()=>{ openBook(b); });
       host.appendChild(el);
     });
   }
 
-  function renderTOC(book){
-    const toc = $('#toc'); const empty = $('#tocEmpty');
-    toc.innerHTML = '';
-    if (!book || !book.chapters.length){ empty.classList.remove('hidden'); return; }
-    empty.classList.add('hidden');
+  function openBook(book){
+    state.currentBook = book;
+    $('#bookBadge').textContent = book.title;
+    $('#bookBadge').style.display = 'inline-flex';
+    renderChapters(book);
+    showChapters();
+  }
 
-    book.chapters.forEach((ch, i)=>{
-      const li = document.createElement('li');
-      const btn = document.createElement('button');
-      btn.innerHTML = `${escapeHtml(ch.title)} <span class="muted" style="float:right">${ch.start_page?`стр. ${ch.start_page}`:''}</span>`;
-      btn.addEventListener('click', ()=> openChapter(book, ch));
-      li.appendChild(btn);
-
-      // Если есть подразделы — рендерим списком
-      if (Array.isArray(ch.subsections) && ch.subsections.length){
-        const ul = document.createElement('ul'); ul.style.listStyle='none'; ul.style.padding='6px 0 0 12px';
-        ch.subsections.forEach(ss=>{
-          const li2 = document.createElement('li'); const b2 = document.createElement('button');
-          b2.style.marginTop='6px';
-          b2.innerHTML = `${escapeHtml(ss.title)} <span class="muted" style="float:right">${ss.start_page?`стр. ${ss.start_page}`:''}</span>`;
-          b2.addEventListener('click', ()=> openSubsection(book, ch, ss));
-          ul.appendChild(li2).appendChild(b2);
-        });
-        li.appendChild(ul);
-      }
-
-      toc.appendChild(li);
+  function renderChapters(book){
+    const host = $('#chaptersList'); host.innerHTML = '';
+    const empty = $('#noChapters'); empty.classList.add('hidden');
+    if (!book?.chapters?.length){ empty.classList.remove('hidden'); return; }
+    book.chapters.forEach(ch=>{
+      const el = document.createElement('button');
+      el.className = 'item';
+      el.innerHTML = `
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(ch.title)}</div>
+          <div class="meta">${ch.start_page?`стр. ${ch.start_page}`:' '}</div>
+        </div>
+      `;
+      el.addEventListener('click', ()=> openChapter(ch.idx));
+      host.appendChild(el);
     });
   }
 
-  /* ---------- ОТКРЫТИЕ ГЛАВ/РАЗДЕЛОВ ---------- */
-  function clearContent(){
-    $('#content').innerHTML = `<div class="empty">Выберите главу слева, чтобы открыть текст.</div>`;
-    $('#badge').style.display = 'none';
+  /* ====== ЧТЕНИЕ ====== */
+  const shell = $('#readerShell');
+  const hTitle = $('#hTitle'), hPos = $('#hPos'), hBody = $('#hBody');
+
+  function openChapter(idx){
+    if (!state.currentBook) return;
+    state.currentChapter = idx;
+    const ch = state.currentBook.chapters[idx];
+    shell.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    renderChapter(ch);
+    persist.setLast(state.currentBook.content_id, idx);
+    window.scrollTo({top:0, behavior:'instant'});
   }
 
-  function openChapter(book, ch){
-    renderContent({
-      heading: ch.title,
-      pos: ch.start_page ? `стр. ${ch.start_page}` : '',
-      text: ch.content
-    }, book);
-  }
-
-  function openSubsection(book, ch, ss){
-    renderContent({
-      heading: `${ch.title} — ${ss.title}`,
-      pos: ss.start_page ? `стр. ${ss.start_page}` : (ch.start_page?`гл. стр. ${ch.start_page}`:''),
-      text: ss.content
-    }, book);
-  }
-
-  function renderContent({heading, pos, text}, book){
-    const host = $('#content'); host.innerHTML = '';
-    const badge = $('#badge'); badge.textContent = book?.title || ''; badge.style.display = book ? 'inline-flex':'none';
-
-    const h1 = document.createElement('h1'); h1.textContent = heading || 'Без названия';
-    const meta = document.createElement('div'); meta.className = 'chapter-pos'; meta.textContent = pos || '';
-    const body = document.createElement('div');
-
-    if (text && typeof text === 'string'){
-      // Разбиваем на абзацы по пустой строке
+  function renderChapter(ch){
+    hTitle.textContent = ch?.title || '—';
+    hPos.textContent = ch?.start_page ? `стр. ${ch.start_page}` : '';
+    hBody.style.setProperty('--fs', state.fontSize + 'px');
+    hBody.style.setProperty('--lh', 1.7);
+    const text = ch?.content;
+    hBody.innerHTML = '';
+    if (text){
       text.trim().split(/\n{2,}/).forEach(p=>{
-        const q = p.trim();
-        if (!q) return;
-        const P = document.createElement('p'); P.textContent = q; body.appendChild(P);
+        if (!p.trim()) return;
+        const P = document.createElement('p'); P.textContent = p.trim(); hBody.appendChild(P);
       });
     } else {
-      body.innerHTML = `<div class="empty">Для этой главы в JSON нет текстового поля <b>content</b> (или <b>paragraphs</b>). Добавьте его — и текст появится здесь автоматически.</div>`;
+      const note = document.createElement('div');
+      note.className = 'empty';
+      note.innerHTML = 'Для этой главы в JSON нет текстового поля <b>content</b> (или <b>paragraphs</b>).';
+      hBody.appendChild(note);
     }
-
-    host.appendChild(h1);
-    if (meta.textContent) host.appendChild(meta);
-    host.appendChild(body);
-    window.scrollTo({top:0, behavior:'smooth'});
   }
 
-  /* ---------- BOOT ---------- */
-  (async function boot(){
-    const books = await loadBooks();
-    renderBooks(books);
-    // Автоматически выбрать первую книгу (если есть)
-    if (books[0]){ currentBook = books[0]; renderTOC(currentBook); }
-  })();
+  function closeReader(){
+    shell.style.display = 'none';
+    document.body.style.overflow = '';
+  }
 
+  /* Плавающие кнопки */
+  $('#btnPrev').addEventListener('click', ()=>{
+    if (!state.currentBook) return;
+    const n = Math.max(0, state.currentChapter-1);
+    if (n !== state.currentChapter){ openChapter(n); }
+  });
+  $('#btnNext').addEventListener('click', ()=>{
+    if (!state.currentBook) return;
+    const n = Math.min(state.currentBook.chapters.length-1, state.currentChapter+1);
+    if (n !== state.currentChapter){ openChapter(n); }
+  });
+  $('#btnSmaller').addEventListener('click', ()=>{
+    state.fontSize = Math.max(14, state.fontSize-1);
+    localStorage.setItem('reader.fs', state.fontSize);
+    hBody.style.setProperty('--fs', state.fontSize + 'px');
+  });
+  $('#btnBigger').addEventListener('click', ()=>{
+    state.fontSize = Math.min(26, state.fontSize+1);
+    localStorage.setItem('reader.fs', state.fontSize);
+    hBody.style.setProperty('--fs', state.fontSize + 'px');
+  });
+  $('#btnCloseReader').addEventListener('click', closeReader);
+
+  /* Скрытие панели и двойной тап */
+  const reader = $('#reader');
+  let lastTap = 0;
+  function toggleUI(hide){
+    shell.classList.toggle('hide-ui', hide===undefined ? !shell.classList.contains('hide-ui') : hide);
+  }
+  $('#btnHideUI').addEventListener('click', ()=> toggleUI(true));
+  reader.addEventListener('touchend', (e)=>{
+    const now = Date.now();
+    if (now - lastTap < 300){ toggleUI(); } // двойной тап
+    lastTap = now;
+  });
+  // Для десктопа — двойной клик
+  reader.addEventListener('dblclick', ()=> toggleUI());
+
+  /* ====== ПРОДОЛЖИТЬ ЧТЕНИЕ / НАВИГАЦИЯ ====== */
+  $('#btnPickBook').addEventListener('click', ()=> showBooks());
+  $('#btnBackBooks').addEventListener('click', ()=> showBooks());
+  $('#btnContinue').addEventListener('click', async ()=>{
+    const last = persist.getLast();
+    if (!last){ showBooks(); return; }
+    // найти книгу
+    let book = state.books.find(b=> b.content_id === last.bookId);
+    if (!book){
+      // возможно, книгу ещё не грузили (если пользователь обновил страницу)
+      await loadBooks();
+      renderBooks();
+      book = state.books.find(b=> b.content_id === last.bookId);
+    }
+    if (!book){ showBooks(); return; }
+    openBook(book);
+    openChapter(Math.max(0, Math.min(book.chapters.length-1, +last.chIdx || 0)));
+  });
+
+  /* ====== BOOT ====== */
+  (async function boot(){
+    await loadBooks();
+    renderBooks();
+    showHome();
+  })();
 })();
 </script>
 </body>
