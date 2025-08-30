@@ -1,106 +1,128 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>КЛАДОВАЯ • Читалка</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>КЛАДОВАЯ • Читалка</title>
 
-  <!-- Telegram Mini App SDK (работает и в браузере — просто не инициализируется) -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Telegram Mini App SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Внешние лёгкие библиотеки для рендеринга контента -->
-  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
-  <!-- EPUB.js -->
-  <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3/dist/epub.min.js"></script>
-  <!-- PDF.js (core + worker) -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.js"></script>
-  <script>
-    // Указываем воркер PDF.js с CDN
-    if (window["pdfjsLib"]) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.js";
-    }
-  </script>
+<!-- Лёгкие библиотеки -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3/dist/epub.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.js"></script>
+<script>
+  if (window["pdfjsLib"]) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.js";
+  }
+</script>
 
-  <!-- Иконки (SVG data:) и манифест создадим динамически; PWA-иконки в data URI -->
-  <style>
-    :root{
-      --bg:#FAFAFA; --text:#111111; --accent:#3390EC; --hint:#6b7280;
-      --card:#ffffff; --border:#e5e7eb; --shadow:0 8px 28px rgba(0,0,0,.06);
-      --toolbar:#ffffffcc; --muted:#9ca3af;
-      --dark-bg:#1C1C1D; --dark-text:#ffffff; --sepia-bg:#F5ECD9; --sepia-text:#3B2F2A;
-      --reader-max: 78ch;
-    }
-    [data-theme="light"] { --bg:#FAFAFA; --text:#111; --accent:#3390EC; --toolbar:#ffffffcc; }
-    [data-theme="dark"]  { --bg:var(--dark-bg); --text:var(--dark-text); --accent:#3390EC; --card:#202022; --border:#2a2a2b; --toolbar:#1c1c1dcc; }
-    [data-theme="sepia"] { --bg:var(--sepia-bg); --text:var(--sepia-text); --accent:#8A5A44; --card:#F7EFDF; --border:#e6dcc7; --toolbar:#f5ecd9cc; }
+<style>
+  :root{
+    /* БАЗА (beige по умолчанию) */
+    --bg:#F2E8D9;
+    --bg-grad: linear-gradient(180deg,#F7EEDF 0%, #EFE1CE 100%);
+    --text:#2B2622; --accent:#B88B5A; --hint:#7b6e64;
+    --card:#FFF9F0; --border:#E8DAC6; --shadow:0 10px 30px rgba(94,62,24,.08);
+    --toolbar: color-mix(in oklab, #FFF9F0 85%, transparent);
+    --muted:#9b8c80;
+    --reader-max: 78ch;
 
-    html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--text);
-      font:400 16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,"Noto Sans",sans-serif;
-      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-    }
-    *{box-sizing:border-box}
-    a{color:var(--accent); text-decoration:none}
-    button{cursor:pointer}
-    .container{max-width:1100px; margin:0 auto; padding:16px}
-    .grid{display:grid; gap:12px}
-    .grid.cards{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
-    .card{
-      background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow);
-    }
-    .title{font-weight:700; letter-spacing:.2px}
-    .muted{color:var(--hint)}
-    .toolbar{
-      position:sticky; top:0; z-index:30; backdrop-filter:saturate(1.2) blur(8px);
-      background:var(--toolbar); border-bottom:1px solid var(--border);
-    }
-    .toolbar-inner{display:flex; align-items:center; gap:8px; min-height:56px; padding:8px 16px}
-    .logo{display:flex; align-items:center; gap:10px; font-weight:700}
-    .logo svg{width:22px;height:22px}
-    .spacer{flex:1}
-    .btn, .btn-ghost{
-      border-radius:12px; padding:10px 14px; border:1px solid var(--border); background:var(--card);
-    }
-    .btn-primary{
-      background:var(--accent); color:#fff; border-color:transparent;
-    }
-    .btn-ghost{background:transparent}
-    .pill{display:inline-flex; align-items:center; gap:8px; border-radius:999px; padding:8px 12px; background:var(--card); border:1px solid var(--border)}
-    .search{display:flex; gap:8px; align-items:center; padding:8px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card)}
-    input, select{background:transparent; color:inherit; border:1px solid var(--border); border-radius:12px; padding:10px 12px; outline:none}
-    input:focus, select:focus{box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 30%, transparent)}
-    .footerbar{
-      position:sticky; bottom:0; z-index:20; background:var(--toolbar); border-top:1px solid var(--border);
-    }
-    .footer-inner{display:flex; align-items:center; gap:8px; min-height:56px; padding:8px 16px}
-    .progress{
-      height:6px; background:var(--border); border-radius:999px; overflow:hidden;
-    }
-    .progress > span{display:block; height:100%; background:var(--accent); width:0%}
-    .hidden{display:none !important}
-    .reader{
-      margin:0 auto; padding:20px; max-width:var(--reader-max);
-    }
-    .reader p{margin:0 0 1em}
-    .reader img{max-width:100%; border-radius:10px}
-    .reader blockquote{margin:1em 0; padding:0.5em 1em; border-left:4px solid var(--accent); background:color-mix(in oklab, var(--accent) 8%, transparent); border-radius:8px}
-    .reader pre, .reader code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace }
-    .kbd{font:500 12px/1 ui-monospace,monospace; padding:4px 6px; border:1px solid var(--border); border-radius:6px; background:var(--card)}
-    .dropzone{
-      border:2px dashed var(--border); border-radius:16px; padding:24px; text-align:center; transition:.2s;
-    }
-    .dropzone.dragover{border-color:var(--accent); background:color-mix(in oklab, var(--accent) 8%, transparent)}
-    .toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#111c; color:#fff; padding:10px 14px; border-radius:10px; z-index:80}
-    .menu{position:relative}
-    .menu > .menu-list{position:absolute; right:0; top:calc(100% + 8px); background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); padding:8px; min-width:240px; display:none}
-    .menu.open > .menu-list{display:block}
-    .toc{max-height:50vh; overflow:auto}
-    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-  </style>
+    /* альтернативные темы */
+    --dark-bg:#1C1C1D; --dark-text:#ffffff;
+    --sepia-bg:#F5ECD9; --sepia-text:#3B2F2A;
+  }
+  [data-theme="beige"] { /* по умолчанию */
+    --bg:#F2E8D9; --bg-grad: linear-gradient(180deg,#F7EEDF 0%, #EFE1CE 100%);
+    --text:#2B2622; --accent:#B88B5A; --card:#FFF9F0; --border:#E8DAC6;
+    --toolbar: color-mix(in oklab, #FFF9F0 82%, transparent);
+  }
+  [data-theme="light"] { --bg:#FAFAFA; --bg-grad: linear-gradient(180deg,#FFFFFF 0%, #F6F7F9 100%); --text:#111; --accent:#3390EC; --card:#fff; --border:#e5e7eb; --toolbar:#ffffffcc; }
+  [data-theme="dark"]  { --bg:var(--dark-bg); --bg-grad: linear-gradient(180deg,#1C1C1D,#131314); --text:var(--dark-text); --accent:#3390EC; --card:#202022; --border:#2a2a2b; --toolbar:#1c1c1dcc; }
+  [data-theme="sepia"] { --bg:var(--sepia-bg); --bg-grad: linear-gradient(180deg,#F9EFDC,#EEDDC2); --text:var(--sepia-text); --accent:#8A5A44; --card:#F7EFDF; --border:#e6dcc7; --toolbar:#f5ecd9cc; }
+
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    background: var(--bg-grad);
+    font:400 16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,"Noto Sans",sans-serif;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  }
+  *{box-sizing:border-box}
+  a{color:var(--accent); text-decoration:none}
+  button{cursor:pointer}
+  .container{max-width:1100px; margin:0 auto; padding:16px}
+  .grid{display:grid; gap:12px}
+  .grid.cards{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:18px; padding:16px; box-shadow:var(--shadow);
+  }
+  .title{font-weight:700; letter-spacing:.2px}
+  .muted{color:var(--hint)}
+  .toolbar{
+    position:sticky; top:0; z-index:30; backdrop-filter:saturate(1.2) blur(8px);
+    background:var(--toolbar); border-bottom:1px solid var(--border);
+  }
+  .toolbar-inner{display:flex; align-items:center; gap:8px; min-height:60px; padding:8px 16px}
+  .logo{display:flex; align-items:center; gap:10px; font-weight:700}
+  .logo svg{width:22px;height:22px}
+  .spacer{flex:1}
+  .btn, .btn-ghost{
+    border-radius:14px; padding:10px 14px; border:1px solid var(--border); background:var(--card);
+    transition:.15s transform ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{
+    background:var(--accent); color:#fff; border-color:transparent;
+  }
+  .btn-ghost{background:transparent}
+  .pill{display:inline-flex; align-items:center; gap:8px; border-radius:999px; padding:8px 12px; background:var(--card); border:1px solid var(--border)}
+  .search{display:flex; gap:8px; align-items:center; padding:8px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card)}
+  input, select{background:transparent; color:inherit; border:1px solid var(--border); border-radius:12px; padding:10px 12px; outline:none}
+  input:focus, select:focus{box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 30%, transparent)}
+  .footerbar{
+    position:sticky; bottom:0; z-index:20; background:var(--toolbar); border-top:1px solid var(--border);
+  }
+  .footer-inner{display:flex; align-items:center; gap:8px; min-height:56px; padding:8px 16px}
+  .progress{
+    height:6px; background:var(--border); border-radius:999px; overflow:hidden;
+  }
+  .progress > span{display:block; height:100%; background:var(--accent); width:0%}
+  .hidden{display:none !important}
+  .reader{
+    margin:0 auto; padding:20px; max-width:var(--reader-max);
+  }
+  .reader p{margin:0 0 1em}
+  .reader img{max-width:100%; border-radius:10px}
+  .reader blockquote{margin:1em 0; padding:0.5em 1em; border-left:4px solid var(--accent); background:color-mix(in oklab, var(--accent) 10%, transparent); border-radius:8px}
+  .reader pre, .reader code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace }
+  .kbd{font:500 12px/1 ui-monospace,monospace; padding:4px 6px; border:1px solid var(--border); border-radius:6px; background:var(--card)}
+  .dropzone{
+    border:2px dashed var(--border); border-radius:16px; padding:24px; text-align:center; transition:.2s;
+  }
+  .dropzone.dragover{border-color:var(--accent); background:color-mix(in oklab, var(--accent) 10%, transparent)}
+  .toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#111c; color:#fff; padding:10px 14px; border-radius:10px; z-index:80}
+  .menu{position:relative}
+  .menu > .menu-list{position:absolute; right:0; top:calc(100% + 8px); background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); padding:8px; min-width:240px; display:none}
+  .menu.open > .menu-list{display:block}
+  .toc{max-height:50vh; overflow:auto}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  /* Мобильные правки */
+  @media (max-width: 640px){
+    .container{padding:12px}
+    .toolbar-inner{min-height:56px; padding:6px 12px}
+    .grid.cards{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+    .search{display:none} /* меньше шума в шапке */
+    .reader{padding:14px}
+    .footer-inner{gap:6px}
+  }
+</style>
 </head>
-<body data-theme="light">
+<body data-theme="beige">
   <!-- Верхняя панель -->
   <header class="toolbar" role="banner" aria-label="Верхняя панель">
     <div class="toolbar-inner container">
@@ -109,16 +131,17 @@
         <span>КЛАДОВАЯ • Читалка</span>
       </div>
       <div class="spacer"></div>
+
       <div class="search" role="search">
         <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="m21 21l-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0a7 7 0 0 1 14 0Z"/></svg>
         <input id="searchInput" type="search" placeholder="Поиск по библиотеке…" aria-label="Поиск по библиотеке">
       </div>
+
       <div class="menu" id="mainMenu">
-        <button class="btn-ghost" aria-haspopup="menu" aria-expanded="false" title="Меню">
-          ☰
-        </button>
+        <button class="btn-ghost" aria-haspopup="menu" aria-expanded="false" title="Меню">☰</button>
         <div class="menu-list" role="menu" aria-label="Главное меню">
-          <button class="btn" role="menuitem" id="btnImport">Загрузить файл</button>
+          <!-- Важно: label-for, чтобы системный пикер сработал внутри Telegram WebView -->
+          <label class="btn" role="menuitem" for="fileInput" id="btnImport">Загрузить файл</label>
           <button class="btn" role="menuitem" id="btnAddLink">Добавить ссылку</button>
           <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
           <button class="btn" role="menuitem" id="btnSettings">Настройки</button>
@@ -149,7 +172,7 @@
             <div class="title">Библиотека</div>
             <div class="pill">
               <input type="file" id="fileInput" accept=".txt,.md,.markdown,.pdf,.epub,application/epub+zip,application/pdf,text/plain,text/markdown" hidden />
-              <button class="btn" id="btnOpenFile">Открыть файл</button>
+              <label class="btn" id="btnOpenFile" for="fileInput">Открыть файл</label>
               <button class="btn" id="btnOpenDrop">Drag & Drop</button>
             </div>
           </div>
@@ -197,7 +220,7 @@
           </div>
         </div>
 
-        <!-- Собственно контент -->
+        <!-- Контент -->
         <div id="contentHost" class="reader" role="article" aria-live="polite"></div>
 
         <!-- Нижняя панель чтения -->
@@ -239,7 +262,8 @@
         <div class="card">
           <div class="title" style="margin-bottom:8px">Тема</div>
           <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-            <label><input type="radio" name="theme" value="light" checked> Светлая</label>
+            <label><input type="radio" name="theme" value="beige" checked> Бежевая</label>
+            <label><input type="radio" name="theme" value="light"> Светлая</label>
             <label><input type="radio" name="theme" value="dark"> Тёмная</label>
             <label><input type="radio" name="theme" value="sepia"> Сепия</label>
             <label><input type="radio" name="theme" value="auto"> Следовать Telegram</label>
@@ -315,7 +339,7 @@
     </form>
   </dialog>
 
-  <!-- Вспомогательные шаблоны для карточек -->
+  <!-- Шаблон карточки -->
   <template id="tplCard">
     <div class="card">
       <div class="title"></div>
@@ -327,902 +351,859 @@
     </div>
   </template>
 
-  <script>
-  ;(()=>{
+<script>
+;(()=>{
 
-    /* --------------------------- УТИЛИТЫ --------------------------- */
-    const $ = (sel, root=document)=>root.querySelector(sel);
-    const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
-    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-    const uid = ()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+  /* --------------------------- УТИЛИТЫ --------------------------- */
+  const $ = (sel, root=document)=>root.querySelector(sel);
+  const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
+  const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+  const uid = ()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 
-    // Хеш роутер
-    const Router = {
-      go(hash){ location.hash = hash },
-      current(){ return location.hash || "#/library" },
-      parse(){
-        const h = Router.current().replace(/^#\//,'');
-        const [name, ...rest] = h.split('/');
-        return { name, params: rest }
-      }
-    };
-
-    // Тост
-    const toastEl = $('#toast');
-    function toast(msg, ms=1800){
-      toastEl.textContent = msg;
-      toastEl.classList.remove('hidden');
-      setTimeout(()=>toastEl.classList.add('hidden'), ms);
+  // Хеш роутер
+  const Router = {
+    go(hash){ location.hash = hash },
+    current(){ return location.hash || "#/library" },
+    parse(){
+      const h = Router.current().replace(/^#\//,'');
+      const [name, ...rest] = h.split('/');
+      return { name, params: rest }
     }
+  };
 
-    // Примитивный IndexedDB (stores: library, progress, notes, cache, settings)
-    const DB = (()=>{
-      const DB_NAME = 'readerDB';
-      const DB_VER = 3;
-      let dbp;
-      function open(){
-        if (dbp) return dbp;
-        dbp = new Promise((resolve,reject)=>{
-          const req = indexedDB.open(DB_NAME, DB_VER);
-          req.onupgradeneeded = (e)=>{
-            const db = req.result;
-            if (!db.objectStoreNames.contains('library'))  db.createObjectStore('library', {keyPath:'id'});
-            if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', {keyPath:['userId','contentId']});
-            if (!db.objectStoreNames.contains('notes'))    db.createObjectStore('notes', {keyPath:['userId','contentId']});
-            if (!db.objectStoreNames.contains('cache'))    db.createObjectStore('cache', {keyPath:'key'});
-            if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', {keyPath:'key'});
-          };
-          req.onsuccess = ()=>resolve(req.result);
-          req.onerror = ()=>reject(req.error);
-        });
-        return dbp;
-      }
-      async function tx(store, mode='readonly'){
-        const db = await open();
-        return db.transaction(store, mode).objectStore(store);
-      }
-      return {
-        async put(store, val){ const s = await tx(store,'readwrite'); return reqp(s.put(val)); },
-        async get(store, key){ const s = await tx(store); return reqp(s.get(key)); },
-        async delete(store, key){ const s = await tx(store,'readwrite'); return reqp(s.delete(key)); },
-        async getAll(store){ const s = await tx(store); return reqp(s.getAll()); },
-        async clear(store){ const s = await tx(store,'readwrite'); return reqp(s.clear()); },
-      };
-      function reqp(req){ return new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); }) }
-    })();
+  // Тост
+  const toastEl = $('#toast');
+  function toast(msg, ms=1800){
+    toastEl.textContent = msg;
+    toastEl.classList.remove('hidden');
+    setTimeout(()=>toastEl.classList.add('hidden'), ms);
+  }
 
-    // Локальные настройки/хранилище состояния
-    const Store = {
-      async saveLibraryItem(item){ await DB.put('library', item); },
-      async removeLibraryItem(id){ await DB.delete('library', id); },
-      async allLibrary(){ return await DB.getAll('library'); },
-      async saveProgress(userId, contentId, data){ await DB.put('progress', {userId, contentId, ...data}); },
-      async getProgress(userId, contentId){ return await DB.get('progress', [userId, contentId]); },
-      async saveNotes(userId, contentId, notes){ await DB.put('notes', {userId, contentId, notes}); },
-      async getNotes(userId, contentId){ return await DB.get('notes', [userId, contentId]); },
-      async setSetting(key, val){ await DB.put('settings', {key, val}); },
-      async getSetting(key){ const r = await DB.get('settings', key); return r?.val },
-      async cachePut(key, value){ await DB.put('cache', {key, value, ts:Date.now()}); },
-      async cacheGet(key){ const r = await DB.get('cache', key); return r?.value },
-      async clearAll(){ await DB.clear('library'); await DB.clear('progress'); await DB.clear('notes'); await DB.clear('cache'); }
-    };
-
-    /* ---------------------- TELEGRAM АДАПТЕР ----------------------- */
-    const TG = (()=>{
-      let available = false;
-      let user = { id:'local', name:'Гость' };
-      let theme = 'light';
-      let WebApp = null;
-
-      function init(){
-        if (window.Telegram && Telegram.WebApp) {
-          WebApp = Telegram.WebApp;
-          available = true;
-          WebApp.ready();
-          WebApp.expand();
-          const u = WebApp.initDataUnsafe?.user;
-          if (u) user = { id: String(u.id), name: (u.username||u.first_name||'Пользователь') };
-          // Тема Telegram → локальная
-          applyThemeFromTelegram();
-          WebApp.onEvent('themeChanged', applyThemeFromTelegram);
-          // BackButton
-          WebApp.BackButton.onClick(()=> navigateToLibrary());
-        } else {
-          available = false; // браузер
-        }
-        updateMainButton();
-      }
-
-      function applyThemeFromTelegram(){
-        const tgTheme = Telegram.WebApp.colorScheme; // 'light' | 'dark'
-        const follow = appSettings.theme === 'auto';
-        if (follow) setTheme(tgTheme==='dark'?'dark':'light');
-      }
-
-      function setTheme(t){
-        document.body.setAttribute('data-theme', t);
-        appSettings.appliedTheme = t;
-      }
-
-      function showMainButton(text, onClick){
-        if (!available) return;
-        WebApp.MainButton.setParams({text, is_visible:true});
-        WebApp.MainButton.onClick(()=> onClick?.());
-      }
-      function hideMainButton(){ if (available) Telegram.WebApp.MainButton.hide(); }
-      function showBackButton(flag){
-        if (!available) return;
-        if (flag) WebApp.BackButton.show(); else WebApp.BackButton.hide();
-      }
-      function openLink(url){
-        if (available) WebApp.openLink(url, { try_instant_view: true });
-        else window.open(url, '_blank', 'noopener');
-      }
-
-      return {
-        init, available:()=>available, user:()=>user, setTheme, showMainButton, hideMainButton, showBackButton, openLink
-      };
-    })();
-
-    /* ------------------- НАСТРОЙКИ ПРИЛОЖЕНИЯ ---------------------- */
-    const appSettings = {
-      theme: 'auto', appliedTheme: 'light',
-      fontSize: 18, lineHeight: 1.55, columnWidth: '72ch', textAlign:'start', fontFamily:'system-ui',
-      language: 'ru'
-    };
-
-    // Применить настройки рендера к контейнеру чтения
-    function applyReaderStyles(){
-      const host = $('#contentHost');
-      host.style.setProperty('--reader-max', appSettings.columnWidth);
-      host.style.fontSize = appSettings.fontSize + 'px';
-      host.style.lineHeight = String(appSettings.lineHeight);
-      host.style.textAlign = appSettings.textAlign;
-      if (appSettings.fontFamily === 'serif') host.style.fontFamily = 'Georgia, "Times New Roman", serif';
-      else if (appSettings.fontFamily === 'mono') host.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-      else host.style.fontFamily = 'system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,"Noto Sans",sans-serif';
+  // Примитивный IndexedDB (stores: library, progress, notes, cache, settings)
+  const DB = (()=>{
+    const DB_NAME = 'readerDB';
+    const DB_VER = 4; // +1: добавили ownerId миграцию
+    let dbp;
+    function open(){
+      if (dbp) return dbp;
+      dbp = new Promise((resolve,reject)=>{
+        const req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = (e)=>{
+          const db = req.result;
+          if (!db.objectStoreNames.contains('library'))  db.createObjectStore('library', {keyPath:'id'});
+          if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', {keyPath:['userId','contentId']});
+          if (!db.objectStoreNames.contains('notes'))    db.createObjectStore('notes', {keyPath:['userId','contentId']});
+          if (!db.objectStoreNames.contains('cache'))    db.createObjectStore('cache', {keyPath:'key'});
+          if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', {keyPath:'key'});
+        };
+        req.onsuccess = ()=>resolve(req.result);
+        req.onerror = ()=>reject(req.error);
+      });
+      return dbp;
     }
-
-    /* ----------------- ПРЕДУСТАНОВЛЕННЫЕ ССЫЛКИ -------------------- */
-    const PRESET_LINKS = [
-      { id: 'teleg-1', type:'link', url:'https://telegra.ph/Poslednij-zakat-na-krayu-tishiny-05-21', title:'Последний закат на краю тишины', source:'telegra.ph' },
-      { id: 'teleg-2', type:'link', url:'https://telegra.ph/Progulka-po-lesu-05-15', title:'Прогулка по лесу', source:'telegra.ph' },
-      { id: 'teleg-3', type:'link', url:'https://telegra.ph/Prostye-radosti-06-01', title:'Простые радости', source:'telegra.ph' },
-    ];
-
-    /* --------------------- СОСТОЯНИЕ СЕССИИ ----------------------- */
-    let currentContent = null; // {id,type,title, ...}
-    let currentReader = null;  // инстанс ридера (см. ниже)
-    let textSearchIndex = null; // для PDF/TXT/MD
-    let pdfScale = 1.15;
-
-    /* -------------------------- UI HOOKS --------------------------- */
-    const views = {
-      library: $('#view-library'),
-      reader: $('#view-reader'),
-      settings: $('#view-settings'),
+    async function tx(store, mode='readonly'){
+      const db = await open();
+      return db.transaction(store, mode).objectStore(store);
+    }
+    function reqp(req){ return new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); }) }
+    return {
+      async put(store, val){ const s = await tx(store,'readwrite'); return reqp(s.put(val)); },
+      async get(store, key){ const s = await tx(store); return reqp(s.get(key)); },
+      async delete(store, key){ const s = await tx(store,'readwrite'); return reqp(s.delete(key)); },
+      async getAll(store){ const s = await tx(store); return reqp(s.getAll()); },
+      async clear(store){ const s = await tx(store,'readwrite'); return reqp(s.clear()); },
     };
+  })();
 
-    function showView(name){
-      for (const k in views) views[k].classList.toggle('hidden', k!==name);
-      if (name === 'reader'){ TG.showBackButton(true); } else { TG.showBackButton(false); }
+  // Локальные настройки/хранилище состояния
+  const Store = {
+    async saveLibraryItem(item){ await DB.put('library', item); },
+    async removeLibraryItem(id){ await DB.delete('library', id); },
+    async allLibrary(){ return await DB.getAll('library'); },
+    async saveProgress(userId, contentId, data){ await DB.put('progress', {userId, contentId, ...data}); },
+    async getProgress(userId, contentId){ return await DB.get('progress', [userId, contentId]); },
+    async saveNotes(userId, contentId, notes){ await DB.put('notes', {userId, contentId, notes}); },
+    async getNotes(userId, contentId){ return await DB.get('notes', [userId, contentId]); },
+    async setSetting(key, val){ await DB.put('settings', {key, val}); },
+    async getSetting(key){ const r = await DB.get('settings', key); return r?.val },
+    async cachePut(key, value){ await DB.put('cache', {key, value, ts:Date.now()}); },
+    async cacheGet(key){ const r = await DB.get('cache', key); return r?.value },
+    async clearAll(){ await DB.clear('library'); await DB.clear('progress'); await DB.clear('notes'); await DB.clear('cache'); }
+  };
+
+  /* ---------------------- TELEGRAM АДАПТЕР ----------------------- */
+  const TG = (()=>{
+    let available = false;
+    let user = { id:'local', name:'Гость' };
+    let WebApp = null;
+
+    function init(){
+      if (window.Telegram && Telegram.WebApp) {
+        WebApp = Telegram.WebApp;
+        available = true;
+        WebApp.ready();
+        WebApp.expand();
+        const u = WebApp.initDataUnsafe?.user;
+        if (u) user = { id: String(u.id), name: (u.username||[u.first_name,u.last_name].filter(Boolean).join(' ')||'Пользователь') };
+        applyThemeFromTelegram();
+        WebApp.onEvent('themeChanged', applyThemeFromTelegram);
+        WebApp.BackButton.onClick(()=> navigateToLibrary());
+      } else {
+        available = false;
+      }
       updateMainButton();
     }
 
-    // Меню в шапке
-    const mainMenu = $('#mainMenu');
-    mainMenu.querySelector('button').addEventListener('click', ()=>{
-      mainMenu.classList.toggle('open');
-      mainMenu.querySelector('button').setAttribute('aria-expanded', mainMenu.classList.contains('open')?'true':'false');
-    });
-    document.addEventListener('click', (e)=>{ if (!mainMenu.contains(e.target)) mainMenu.classList.remove('open'); });
-
-    $('#btnSettings').addEventListener('click', ()=> Router.go('#/settings'));
-    $('#btnExportNotes').addEventListener('click', exportAllNotes);
-    $('#btnClearAll').addEventListener('click', async ()=>{
-      if (!confirm('Удалить библиотеку/прогресс/заметки/кеш?')) return;
-      await Store.clearAll(); await refreshLibrary(); toast('Очищено');
-    });
-
-    // Домой по клику на логотип
-    $('#appLogo').addEventListener('click', ()=> navigateToLibrary());
-    $('#appLogo').addEventListener('keypress', (e)=>{ if(e.key==='Enter') navigateToLibrary(); });
-
-    // Поиск по библиотеке
-    $('#searchInput').addEventListener('input', ()=> refreshLibrary());
-
-    // Drag&Drop
-    const dropZone = $('#dropZone');
-    $('#btnOpenDrop').addEventListener('click', ()=> dropZone.classList.toggle('hidden'));
-    ;['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{e.preventDefault(); dropZone.classList.add('dragover');}));
-    ;['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{e.preventDefault(); dropZone.classList.remove('dragover');}));
-    dropZone.addEventListener('drop', async (e)=>{ const files = Array.from(e.dataTransfer.files||[]); if (files.length) await importFiles(files); });
-
-    // Файл-диалог
-    $('#btnOpenFile').addEventListener('click', ()=> $('#fileInput').click());
-    $('#fileInput').addEventListener('change', async (e)=>{ await importFiles(Array.from(e.target.files||[])); e.target.value=''; });
-
-    // Добавление ссылки
-    const dlgAddLink = $('#dlgAddLink'), inputLink = $('#inputLink');
-    $('#btnAddLink').addEventListener('click', ()=>{ inputLink.value=''; dlgAddLink.showModal(); });
-    $('#btnLinkSave').addEventListener('click', async (e)=>{
-      e.preventDefault();
-      const url = inputLink.value.trim();
-      if (!url) return;
-      const item = { id: 'link-'+uid(), type:'link', url, title:url, source:new URL(url).hostname, created:Date.now() };
-      await Store.saveLibraryItem(item); dlgAddLink.close(); await refreshLibrary(); toast('Ссылка добавлена');
-    });
-
-    // Настройки: бинды
-    const themeRadios = $$('input[name="theme"]');
-    themeRadios.forEach(r=>r.addEventListener('change', async ()=>{
-      appSettings.theme = themeRadios.find(x=>x.checked).value;
-      await Store.setSetting('theme', appSettings.theme);
-      if (appSettings.theme==='auto') TG.setTheme(appSettings.appliedTheme); else TG.setTheme(appSettings.theme);
-    }));
-    const fontSizeRange = $('#fontSizeRange'), lineHeightRange = $('#lineHeightRange');
-    const fontSizeVal = $('#fontSizeVal'), lineHeightVal = $('#lineHeightVal');
-    const columnWidthSel = $('#columnWidth'), textAlignSel = $('#textAlign'), fontFamilySel = $('#fontFamily');
-    function persistReadingPrefs(){
-      Store.setSetting('fontSize', appSettings.fontSize);
-      Store.setSetting('lineHeight', appSettings.lineHeight);
-      Store.setSetting('columnWidth', appSettings.columnWidth);
-      Store.setSetting('textAlign', appSettings.textAlign);
-      Store.setSetting('fontFamily', appSettings.fontFamily);
-      applyReaderStyles(); if (currentReader?.applyTypography) currentReader.applyTypography();
-    }
-    fontSizeRange.addEventListener('input', ()=>{ appSettings.fontSize = +fontSizeRange.value; fontSizeVal.textContent = appSettings.fontSize; persistReadingPrefs(); });
-    lineHeightRange.addEventListener('input', ()=>{ appSettings.lineHeight = (+lineHeightRange.value/100).toFixed(2); lineHeightVal.textContent = appSettings.lineHeight; persistReadingPrefs(); });
-    columnWidthSel.addEventListener('change', ()=>{ appSettings.columnWidth = columnWidthSel.value; persistReadingPrefs(); });
-    textAlignSel.addEventListener('change', ()=>{ appSettings.textAlign = textAlignSel.value; persistReadingPrefs(); });
-    fontFamilySel.addEventListener('change', ()=>{ appSettings.fontFamily = fontFamilySel.value; persistReadingPrefs(); });
-
-    // Кнопки чтения
-    $('#btnReaderBack').addEventListener('click', ()=> navigateToLibrary());
-    $('#btnTOC').addEventListener('click', ()=> openSidePanelTOC());
-    $('#btnBookmark').addEventListener('click', ()=> addBookmark());
-    $('#btnAddNote').addEventListener('click', ()=> addNoteDialog());
-    $('#btnFind').addEventListener('click', ()=> findDialog());
-    $('#btnReaderSettings').addEventListener('click', ()=> Router.go('#/settings'));
-    $('#btnClearThis').addEventListener('click', async ()=>{ if (!currentContent) return; if (!confirm('Удалить кеш/прогресс/заметки этой книги?')) return; await clearThisBook(currentContent.id); toast('Очищено'); });
-
-    $('#btnPrev').addEventListener('click', ()=> currentReader?.prev && currentReader.prev());
-    $('#btnNext').addEventListener('click', ()=> currentReader?.next && currentReader.next());
-    $('#btnZoomIn').addEventListener('click', ()=> currentReader?.zoom && currentReader.zoom(1));
-    $('#btnZoomOut').addEventListener('click', ()=> currentReader?.zoom && currentReader.zoom(-1));
-    $('#btnClosePanel').addEventListener('click', ()=> $('#sidePanel').classList.add('hidden'));
-
-    // Кнопка «Меню чтения»
-    const readerMenu = $('#readerMenu');
-    readerMenu.querySelector('button').addEventListener('click', ()=>{
-      readerMenu.classList.toggle('open');
-      readerMenu.querySelector('button').setAttribute('aria-expanded', readerMenu.classList.contains('open')?'true':'false');
-    });
-    document.addEventListener('click', (e)=>{ if (!readerMenu.contains(e.target)) readerMenu.classList.remove('open'); });
-
-    /* -------------------- МАНИФЕСТ + SERVICE WORKER -------------------- */
-    (function makeManifest(){
-      const manifest = {
-        name: "КЛАДОВАЯ • Читалка",
-        short_name: "Читалка",
-        start_url: ".",
-        display: "standalone",
-        background_color: "#FAFAFA",
-        theme_color: "#3390EC",
-        icons: [
-          { src: "data:image/svg+xml;utf8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" rx="18" fill="%233390EC"/><path d="M18 28a8 8 0 0 1 8-8h44a8 8 0 0 1 8 8v40a8 8 0 0 1-8 8H36l-18 10V28z" fill="white"/></svg>'), sizes:"96x96", type:"image/svg+xml" }
-        ]
-      };
-      const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-      const link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = URL.createObjectURL(blob);
-      document.head.appendChild(link);
-    })();
-
-    (function registerSW(){
-      if (!('serviceWorker' in navigator)) return;
-      const swCode = `
-        const CACHE = 'reader-shell-v4';
-        const APP_SHELL = ['/', location.pathname, location.href];
-        self.addEventListener('install', (e)=> {
-          e.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
-        });
-        self.addEventListener('activate', (e)=> {
-          e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))) .then(()=>self.clients.claim()));
-        });
-        self.addEventListener('fetch', (e)=>{
-          const req = e.request;
-          const url = new URL(req.url);
-          if (req.method!=='GET') return;
-          // Кеш-First для нашего origin (shell)
-          if (url.origin === location.origin) {
-            e.respondWith(caches.match(req).then(r=> r || fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE).then(c=>c.put(req, copy)); return res; })));
-          }
-          // Для CDN библиотек — Cache with Network Fallback
-          else {
-            e.respondWith(caches.match(req).then(r=> r || fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE).then(c=>c.put(req, copy)); return res; }).catch(()=>r)));
-          }
-        });
-      `;
-      const blob = new Blob([swCode], {type:'text/javascript'});
-      const swUrl = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(swUrl).catch(()=>{});
-    })();
-
-    // Кнопка "Скачать CNAME" в настройках
-    $('#btnMakeCNAME').addEventListener('click', ()=>{
-      const domain = prompt('Введите ваш домен (например, books.example.ru):','example.com');
-      if (!domain) return;
-      const blob = new Blob([domain.trim()], {type:'text/plain'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = 'CNAME'; a.click();
-    });
-
-    /* ------------------------- РЕНДЕРЫ ----------------------------- */
-
-    // Общая обвязка прогресса
-    async function updateProgress(pctText='0%', pct=0){
-      $('#progressText').textContent = pctText;
-      $('#progressBar').style.width = pct + '%';
+    function applyThemeFromTelegram(){
+      const follow = appSettings.theme === 'auto';
+      if (!follow) return;
+      const tgTheme = Telegram.WebApp.colorScheme; // 'light' | 'dark'
+      setTheme(tgTheme==='dark'?'dark':'light');
     }
 
-    // Базовый интерфейс «ридера»
-    function makeBaseReader(){
-      return {
-        destroy(){},
-        applyTypography(){},
-        next(){}, prev(){}, zoom(){},
-        getLocation(){ return { pct:0, label:'', raw:null } },
-        gotoLocation(loc){},
-        async saveProgress(){
-          if (!currentContent) return;
-          const { pct, label, raw } = this.getLocation();
-          await Store.saveProgress(TG.user().id, currentContent.id, { pct, label, raw, ts:Date.now() });
-          updateProgress(`${Math.round(pct)}% ${label||''}`, pct);
-        }
-      };
+    function setTheme(t){
+      document.body.setAttribute('data-theme', t);
+      appSettings.appliedTheme = t;
     }
 
-    /* -------- TXT/MD -------- */
-    function TextReader(text, isMarkdown){
-      const base = makeBaseReader();
-      const host = $('#contentHost');
-      let pos = 0; // символов
-      const chunkSize = 4000; // постранично-квази
-      let paragraphs = [];
-      if (isMarkdown) {
-        const html = DOMPurify.sanitize(marked.parse(text, {mangle:false, headerIds:true}));
-        host.innerHTML = `<article class="md-body">${html}</article>`;
-        paragraphs = Array.from(host.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
-      } else {
-        // Превратим текст в абзацы (по двойному \n)
-        const parts = text.split(/\n{2,}/).map(p=>`<p>${escapeHtml(p).replace(/\n/g,'<br>')}</p>`).join('\n');
-        host.innerHTML = `<article>${parts}</article>`;
-        paragraphs = $$('#contentHost p');
-      }
-      applyReaderStyles();
+    function showBackButton(flag){
+      if (!available) return;
+      if (flag) WebApp.BackButton.show(); else WebApp.BackButton.hide();
+    }
+    function openLink(url){
+      if (available) WebApp.openLink(url, { try_instant_view: true });
+      else window.open(url, '_blank', 'noopener');
+    }
 
-      textSearchIndex = text.toLowerCase();
-      function total(){ return text.length||1 }
-      function pct(){ return Math.min(100, Math.max(0, Math.round((pos/total())*100))) }
-      function setPos(newPos){ pos = clamp(newPos,0,total()); scrollToChar(pos); base.saveProgress(); }
-      function scrollToChar(ch){
-        // Приблизительно найдём абзац, в котором этот offset
-        let acc = 0;
-        for (const el of paragraphs){
-          const len = el.textContent.length + 2;
-          if (acc + len > ch){ el.scrollIntoView({behavior:'smooth', block:'start'}); break; }
-          acc += len;
-        }
-      }
-      function keyNav(e){
-        if (e.key==='ArrowRight' || e.key==='PageDown') base.next();
-        if (e.key==='ArrowLeft'  || e.key==='PageUp')   base.prev();
-      }
-      document.addEventListener('keydown', keyNav);
+    return {
+      init, available:()=>available, user:()=>user, setTheme, showBackButton, openLink
+    };
+  })();
 
-      return Object.assign(base, {
-        destroy(){ document.removeEventListener('keydown', keyNav); },
-        applyTypography(){ /* уже применили через host styles */ },
-        next(){ setPos(pos + chunkSize); },
-        prev(){ setPos(pos - chunkSize); },
-        zoom(){},
-        getLocation(){ return { pct:pct(), label:'', raw:pos } },
-        gotoLocation(loc){ if (typeof loc==='number') setPos(loc); },
+  /* ------------------- НАСТРОЙКИ ПРИЛОЖЕНИЯ ---------------------- */
+  const appSettings = {
+    theme: 'beige', appliedTheme: 'beige',
+    fontSize: 18, lineHeight: 1.55, columnWidth: '72ch', textAlign:'start', fontFamily:'system-ui',
+    language: 'ru'
+  };
+
+  function applyReaderStyles(){
+    const host = $('#contentHost');
+    host.style.setProperty('--reader-max', appSettings.columnWidth);
+    host.style.fontSize = appSettings.fontSize + 'px';
+    host.style.lineHeight = String(appSettings.lineHeight);
+    host.style.textAlign = appSettings.textAlign;
+    if (appSettings.fontFamily === 'serif') host.style.fontFamily = 'Georgia, "Times New Roman", serif';
+    else if (appSettings.fontFamily === 'mono') host.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    else host.style.fontFamily = 'system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,"Noto Sans",sans-serif';
+  }
+
+  /* ----------------- ПРЕДУСТАНОВЛЕННЫЕ ССЫЛКИ -------------------- */
+  const PRESET_LINKS = [
+    { id: 'teleg-1', type:'link', url:'https://telegra.ph/Poslednij-zakat-na-krayu-tishiny-05-21', title:'Последний закат на краю тишины', source:'telegra.ph' },
+    { id: 'teleg-2', type:'link', url:'https://telegra.ph/Progulka-po-lesu-05-15', title:'Прогулка по лесу', source:'telegra.ph' },
+    { id: 'teleg-3', type:'link', url:'https://telegra.ph/Prostye-radosti-06-01', title:'Простые радости', source:'telegra.ph' },
+  ];
+
+  /* --------------------- СОСТОЯНИЕ СЕССИИ ----------------------- */
+  let currentContent = null;
+  let currentReader = null;
+  let textSearchIndex = null;
+  let pdfScale = 1.15;
+  let touchStartX = 0, touchStartY = 0;
+
+  /* -------------------------- UI HOOKS --------------------------- */
+  const views = { library: $('#view-library'), reader: $('#view-reader'), settings: $('#view-settings') };
+  function showView(name){
+    for (const k in views) views[k].classList.toggle('hidden', k!==name);
+    TG.showBackButton(name === 'reader');
+    updateMainButton();
+  }
+
+  // Меню
+  const mainMenu = $('#mainMenu');
+  mainMenu.querySelector('button').addEventListener('click', ()=>{
+    mainMenu.classList.toggle('open');
+    mainMenu.querySelector('button').setAttribute('aria-expanded', mainMenu.classList.contains('open')?'true':'false');
+  });
+  document.addEventListener('click', (e)=>{ if (!mainMenu.contains(e.target)) mainMenu.classList.remove('open'); });
+
+  $('#btnSettings').addEventListener('click', ()=> Router.go('#/settings'));
+  $('#btnExportNotes').addEventListener('click', exportAllNotes);
+  $('#btnClearAll').addEventListener('click', async ()=>{
+    if (!confirm('Удалить библиотеку/прогресс/заметки/кеш?')) return;
+    await Store.clearAll(); await refreshLibrary(); toast('Очищено');
+  });
+
+  // Домой
+  $('#appLogo').addEventListener('click', ()=> navigateToLibrary());
+  $('#appLogo').addEventListener('keypress', (e)=>{ if(e.key==='Enter') navigateToLibrary(); });
+
+  // Поиск
+  $('#searchInput').addEventListener('input', ()=> refreshLibrary());
+
+  // Drag&Drop (в Telegram часто не работает — оставляем как доп. способ)
+  const dropZone = $('#dropZone');
+  $('#btnOpenDrop').addEventListener('click', ()=> dropZone.classList.toggle('hidden'));
+  ;['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{e.preventDefault(); dropZone.classList.add('dragover');}));
+  ;['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{e.preventDefault(); dropZone.classList.remove('dragover');}));
+  dropZone.addEventListener('drop', async (e)=>{ const files = Array.from(e.dataTransfer.files||[]); if (files.length) await importFiles(files); });
+
+  // Открыть файл (и пункт меню — label for)
+  $('#btnOpenFile').addEventListener('click', ()=> {/* label-for делает свое, но пусть будет */});
+  $('#fileInput').addEventListener('change', async (e)=>{ await importFiles(Array.from(e.target.files||[])); e.target.value=''; });
+
+  // Добавление ссылки
+  const dlgAddLink = $('#dlgAddLink'), inputLink = $('#inputLink');
+  $('#btnAddLink').addEventListener('click', ()=>{ inputLink.value=''; dlgAddLink.showModal(); });
+  $('#btnLinkSave').addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const url = inputLink.value.trim(); if (!url) return;
+    const item = { id: 'link-'+uid(), ownerId: TG.user().id, type:'link', url, title:url, source:new URL(url).hostname, created:Date.now() };
+    await Store.saveLibraryItem(item); dlgAddLink.close(); await refreshLibrary(); toast('Ссылка добавлена');
+  });
+
+  // Настройки
+  const themeRadios = $$('input[name="theme"]');
+  themeRadios.forEach(r=>r.addEventListener('change', async ()=>{
+    appSettings.theme = themeRadios.find(x=>x.checked).value;
+    await Store.setSetting('theme', appSettings.theme);
+    if (appSettings.theme==='auto') TG.setTheme(appSettings.appliedTheme);
+    else document.body.setAttribute('data-theme', appSettings.theme);
+  }));
+  const fontSizeRange = $('#fontSizeRange'), lineHeightRange = $('#lineHeightRange');
+  const fontSizeVal = $('#fontSizeVal'), lineHeightVal = $('#lineHeightVal');
+  const columnWidthSel = $('#columnWidth'), textAlignSel = $('#textAlign'), fontFamilySel = $('#fontFamily');
+  function persistReadingPrefs(){
+    Store.setSetting('fontSize', appSettings.fontSize);
+    Store.setSetting('lineHeight', appSettings.lineHeight);
+    Store.setSetting('columnWidth', appSettings.columnWidth);
+    Store.setSetting('textAlign', appSettings.textAlign);
+    Store.setSetting('fontFamily', appSettings.fontFamily);
+    applyReaderStyles(); if (currentReader?.applyTypography) currentReader.applyTypography();
+  }
+  fontSizeRange.addEventListener('input', ()=>{ appSettings.fontSize = +fontSizeRange.value; fontSizeVal.textContent = appSettings.fontSize; persistReadingPrefs(); });
+  lineHeightRange.addEventListener('input', ()=>{ appSettings.lineHeight = (+lineHeightRange.value/100).toFixed(2); lineHeightVal.textContent = appSettings.lineHeight; persistReadingPrefs(); });
+  columnWidthSel.addEventListener('change', ()=>{ appSettings.columnWidth = columnWidthSel.value; persistReadingPrefs(); });
+  textAlignSel.addEventListener('change', ()=>{ appSettings.textAlign = textAlignSel.value; persistReadingPrefs(); });
+  fontFamilySel.addEventListener('change', ()=>{ appSettings.fontFamily = fontFamilySel.value; persistReadingPrefs(); });
+
+  // Кнопки чтения
+  $('#btnReaderBack').addEventListener('click', ()=> navigateToLibrary());
+  $('#btnTOC').addEventListener('click', ()=> openSidePanelTOC());
+  $('#btnBookmark').addEventListener('click', ()=> addBookmark());
+  $('#btnAddNote').addEventListener('click', ()=> addNoteDialog());
+  $('#btnFind').addEventListener('click', ()=> findDialog());
+  $('#btnReaderSettings').addEventListener('click', ()=> Router.go('#/settings'));
+  $('#btnClearThis').addEventListener('click', async ()=>{ if (!currentContent) return; if (!confirm('Удалить кеш/прогресс/заметки этой книги?')) return; await clearThisBook(currentContent.id); toast('Очищено'); });
+
+  $('#btnPrev').addEventListener('click', ()=> currentReader?.prev && currentReader.prev());
+  $('#btnNext').addEventListener('click', ()=> currentReader?.next && currentReader.next());
+  $('#btnZoomIn').addEventListener('click', ()=> currentReader?.zoom && currentReader.zoom(1));
+  $('#btnZoomOut').addEventListener('click', ()=> currentReader?.zoom && currentReader.zoom(-1));
+  $('#btnClosePanel').addEventListener('click', ()=> $('#sidePanel').classList.add('hidden'));
+
+  /* -------------------- PWA: manifest + SW -------------------- */
+  (function makeManifest(){
+    const manifest = {
+      name: "КЛАДОВАЯ • Читалка",
+      short_name: "Читалка",
+      start_url: ".",
+      display: "standalone",
+      background_color: "#EFE1CE",
+      theme_color: "#B88B5A",
+      icons: [
+        { src: "data:image/svg+xml;utf8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F7EEDF"/><stop offset="1" stop-color="#EFE1CE"/></linearGradient></defs><rect width="96" height="96" rx="18" fill="url(#g)"/><path d="M18 28a8 8 0 0 1 8-8h44a8 8 0 0 1 8 8v40a8 8 0 0 1-8 8H36l-18 10V28z" fill="#B88B5A"/></svg>'), sizes:"96x96", type:"image/svg+xml" }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  })();
+
+  (function registerSW(){
+    if (!('serviceWorker' in navigator)) return;
+    const swCode = `
+      const CACHE = 'reader-shell-v5';
+      const APP_SHELL = ['/', location.pathname, location.href];
+      self.addEventListener('install', (e)=> {
+        e.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
       });
+      self.addEventListener('activate', (e)=> {
+        e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))) .then(()=>self.clients.claim()));
+      });
+      self.addEventListener('fetch', (e)=>{
+        const req = e.request;
+        const url = new URL(req.url);
+        if (req.method!=='GET') return;
+        if (url.origin === location.origin) {
+          e.respondWith(caches.match(req).then(r=> r || fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE).then(c=>c.put(req, copy)); return res; })));
+        } else {
+          e.respondWith(caches.match(req).then(r=> r || fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE).then(c=>c.put(req, copy)); return res; }).catch(()=>r)));
+        }
+      });
+    `;
+    const blob = new Blob([swCode], {type:'text/javascript'});
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{});
+  })();
+
+  // CNAME
+  $('#btnMakeCNAME').addEventListener('click', ()=>{
+    const domain = prompt('Введите ваш домен (например, books.example.ru):','example.com');
+    if (!domain) return;
+    const blob = new Blob([domain.trim()], {type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'CNAME'; a.click();
+  });
+
+  /* ------------------------- РЕНДЕРЫ ----------------------------- */
+  async function updateProgress(pctText='0%', pct=0){
+    $('#progressText').textContent = pctText;
+    $('#progressBar').style.width = pct + '%';
+  }
+  function makeBaseReader(){
+    return {
+      destroy(){}, applyTypography(){}, next(){}, prev(){}, zoom(){},
+      getLocation(){ return { pct:0, label:'', raw:null } }, gotoLocation(loc){},
+      async saveProgress(){
+        if (!currentContent) return;
+        const { pct, label, raw } = this.getLocation();
+        await Store.saveProgress(TG.user().id, currentContent.id, { pct, label, raw, ts:Date.now() });
+        updateProgress(`${Math.round(pct)}% ${label||''}`, pct);
+      }
+    };
+  }
+
+  /* -------- TXT/MD -------- */
+  function TextReader(text, isMarkdown){
+    const base = makeBaseReader();
+    const host = $('#contentHost');
+    let pos = 0, paragraphs = [];
+    const chunkSize = 4000;
+
+    if (isMarkdown) {
+      const html = DOMPurify.sanitize(marked.parse(text, {mangle:false, headerIds:true}));
+      host.innerHTML = `<article class="md-body">${html}</article>`;
+      paragraphs = Array.from(host.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
+    } else {
+      const parts = text.split(/\n{2,}/).map(p=>`<p>${escapeHtml(p).replace(/\n/g,'<br>')}</p>`).join('\n');
+      host.innerHTML = `<article>${parts}</article>`;
+      paragraphs = $$('#contentHost p');
+    }
+    applyReaderStyles();
+    textSearchIndex = text.toLowerCase();
+
+    function total(){ return text.length||1 }
+    function pct(){ return Math.min(100, Math.max(0, Math.round((pos/total())*100))) }
+    function setPos(newPos){ pos = clamp(newPos,0,total()); scrollToChar(pos); base.saveProgress(); }
+    function scrollToChar(ch){
+      let acc = 0;
+      for (const el of paragraphs){
+        const len = el.textContent.length + 2;
+        if (acc + len > ch){ el.scrollIntoView({behavior:'smooth', block:'start'}); break; }
+        acc += len;
+      }
+    }
+    function keyNav(e){ if (e.key==='ArrowRight' || e.key==='PageDown') base.next(); if (e.key==='ArrowLeft'||e.key==='PageUp') base.prev(); }
+    document.addEventListener('keydown', keyNav);
+
+    attachSwipe(host, ()=>base.next(), ()=>base.prev());
+
+    return Object.assign(base, {
+      destroy(){ document.removeEventListener('keydown', keyNav); },
+      next(){ setPos(pos + chunkSize); },
+      prev(){ setPos(pos - chunkSize); },
+      zoom(){},
+      getLocation(){ return { pct:pct(), label:'', raw:pos } },
+      gotoLocation(loc){ if (typeof loc==='number') setPos(loc); },
+    });
+  }
+
+  /* -------- EPUB -------- */
+  function EPUBReader(arrayBuffer){
+    const base = makeBaseReader();
+    const host = $('#contentHost'); host.innerHTML = '';
+    const book = ePub(arrayBuffer);
+    const rendition = book.renderTo(host, { width:'100%', height:'calc(100dvh - 210px)' });
+    rendition.themes.register('light', { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)', 'line-height': appSettings.lineHeight, 'text-align': appSettings.textAlign, 'font-size': appSettings.fontSize+'px' }});
+    rendition.themes.register('dark',  { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)'}});
+    rendition.themes.register('sepia', { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)'}});
+    rendition.themes.select('light');
+
+    applyReaderStyles();
+    book.ready.then(()=> book.locations.generate(800));
+    rendition.display();
+
+    rendition.on('relocated', async (loc)=>{
+      const pct = Math.round(book.locations.percentageFromCfi(loc.start.cfi)*100) || 0;
+      updateProgress(pct+'%', pct);
+      await base.saveProgress();
+    });
+
+    function next(){ rendition.next(); }
+    function prev(){ rendition.prev(); }
+    function zoom(delta){
+      const fs = clamp(appSettings.fontSize + (delta>0?1:-1), 14, 28);
+      appSettings.fontSize = fs; $('#fontSizeRange').value = fs; $('#fontSizeVal').textContent = fs;
+      rendition.themes.fontSize(fs+'px'); base.saveProgress();
+    }
+    async function search(q){ if (!q) return []; try { return await book.search(q)||[]; } catch { return []; } }
+
+    attachSwipe(host, next, prev);
+
+    return Object.assign(base, {
+      applyTypography(){ rendition.themes.fontSize(appSettings.fontSize+'px'); },
+      next, prev, zoom, search,
+      getLocation(){
+        const loc = rendition.currentLocation();
+        const cfi = loc?.start?.cfi || null;
+        const pct = cfi ? Math.round((book.locations.percentageFromCfi(cfi)||0)*100) : 0;
+        return { pct, label: loc?.start?.displayed?.page || '', raw: cfi };
+      },
+      gotoLocation(cfi){ if (cfi) rendition.display(cfi); },
+      buildTOC: async ()=>{
+        await book.ready;
+        const nav = await book.loaded.navigation;
+        return nav.toc || [];
+      }
+    });
+  }
+
+  /* -------- PDF -------- */
+  function PDFReader(arrayBuffer){
+    const base = makeBaseReader();
+    const host = $('#contentHost'); host.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d',{alpha:false});
+    host.appendChild(canvas);
+
+    let pdfDoc = null, pageNum = 1, pageText = {};
+    pdfScale = 1.15;
+
+    pdfjsLib.getDocument({data: arrayBuffer}).promise.then(async (doc)=>{
+      pdfDoc = doc;
+      await renderPage();
+      buildTextIndex();
+    });
+
+    async function renderPage(){
+      if (!pdfDoc) return;
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: pdfScale });
+      canvas.width = viewport.width; canvas.height = viewport.height;
+      await page.render({canvasContext:ctx, viewport}).promise;
+      const pct = Math.round((pageNum-1)/(pdfDoc.numPages-1||1)*100);
+      updateProgress(`${pct}% стр. ${pageNum}/${pdfDoc.numPages}`, pct);
+      await base.saveProgress();
+    }
+    async function buildTextIndex(){
+      if (!pdfDoc) return;
+      const lower = [];
+      for (let i=1;i<=pdfDoc.numPages;i++){
+        const page = await pdfDoc.getPage(i);
+        const txt = await page.getTextContent();
+        const s = txt.items.map(it=>it.str).join(' ');
+        pageText[i] = s;
+        lower.push(s.toLowerCase());
+      }
+      textSearchIndex = lower.join('\n');
     }
 
-    /* -------- EPUB -------- */
-    function EPUBReader(arrayBuffer){
-      const base = makeBaseReader();
-      const host = $('#contentHost');
-      host.innerHTML = '';
-      const book = ePub(arrayBuffer);
-      const rendition = book.renderTo(host, { width:'100%', height:'calc(100dvh - 210px)' });
-      rendition.themes.register('light', { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)', 'line-height': appSettings.lineHeight, 'text-align': appSettings.textAlign, 'font-size': appSettings.fontSize+'px' }});
-      rendition.themes.register('dark',  { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)'}});
-      rendition.themes.register('sepia', { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)'}});
-      rendition.themes.select('light'); // фактические цвета берём из CSS var
+    function next(){ if (!pdfDoc) return; if (pageNum<pdfDoc.numPages){ pageNum++; renderPage(); } }
+    function prev(){ if (!pdfDoc) return; if (pageNum>1){ pageNum--; renderPage(); } }
+    function zoom(delta){ pdfScale = clamp(pdfScale + (delta>0?0.1:-0.1), .7, 2.2); renderPage(); }
 
-      applyReaderStyles();
+    document.addEventListener('keydown', onKey);
+    function onKey(e){ if (e.key==='ArrowRight' || e.key==='PageDown') next(); if (e.key==='ArrowLeft'||e.key==='PageUp') prev(); }
 
-      book.ready.then(()=> book.locations.generate(800)); // для процента/поиска
-      rendition.display();
+    attachSwipe(host, next, prev);
 
-      rendition.on('relocated', async (loc)=>{
-        const pct = Math.round(book.locations.percentageFromCfi(loc.start.cfi)*100) || 0;
-        updateProgress(pct+'%', pct);
-        await base.saveProgress();
-      });
+    return Object.assign(base,{
+      destroy(){ document.removeEventListener('keydown', onKey); },
+      next, prev, zoom,
+      getLocation(){ const pct = Math.round((pageNum-1)/(pdfDoc?.numPages-1||1)*100)||0; return { pct, label:`стр. ${pageNum}/${pdfDoc?.numPages||'?'}`, raw: pageNum }; },
+      gotoLocation(p){ if (p) { pageNum = clamp(p,1,pdfDoc?.numPages||1); renderPage(); } },
+      buildTOCPages: async ()=> Array.from({length: pdfDoc?.numPages||0}, (_,i)=>({ label:'Стр. '+(i+1), page:i+1 }))
+    });
+  }
 
-      // Навигация
-      function next(){ rendition.next(); }
-      function prev(){ rendition.prev(); }
-      function zoom(delta){
+  /* -------- ВНЕШНЯЯ ССЫЛКА (Telegra.ph) -------- */
+  async function fetchExternalArticle(url){
+    const key = 'ext:'+url;
+    const cached = await Store.cacheGet(key);
+    if (cached) return cached;
+    try {
+      const res = await fetch(url, {mode:'cors'});
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const title = doc.querySelector('meta[property="og:title"]')?.content || doc.querySelector('title')?.textContent || url;
+      const author = doc.querySelector('meta[name="author"]')?.content || doc.querySelector('.author')?.textContent || '';
+      const article = doc.querySelector('article') || doc.querySelector('*[data-article]') || doc.body;
+      const clean = DOMPurify.sanitize(article?.innerHTML || '');
+      const data = { title, author, content: clean, url };
+      await Store.cachePut(key, data);
+      return data;
+    } catch { return null; }
+  }
+  function ExternalReader(articleHTML){
+    const base = makeBaseReader();
+    const host = $('#contentHost');
+    host.innerHTML = `<article class="reader-article">${articleHTML}</article>`;
+    applyReaderStyles();
+    textSearchIndex = host.textContent.toLowerCase();
+
+    let scrollT = 0;
+    function getPct(){
+      const el = document.documentElement;
+      const h = el.scrollHeight - el.clientHeight; if (h<=0) return 0; return Math.round((window.scrollY/h)*100);
+    }
+    window.addEventListener('scroll', onScroll, {passive:true});
+    function onScroll(){ scrollT = window.scrollY; base.saveProgress(); }
+
+    attachSwipe(host, ()=> window.scrollBy({top: window.innerHeight*0.9, behavior:'smooth'}), ()=> window.scrollBy({top: -window.innerHeight*0.9, behavior:'smooth'}));
+
+    return Object.assign(base,{
+      destroy(){ window.removeEventListener('scroll', onScroll);},
+      next(){ window.scrollBy({top: window.innerHeight*0.9, behavior:'smooth'}); },
+      prev(){ window.scrollBy({top: -window.innerHeight*0.9, behavior:'smooth'}); },
+      zoom(delta){
         const fs = clamp(appSettings.fontSize + (delta>0?1:-1), 14, 28);
-        appSettings.fontSize = fs; $('#fontSizeRange').value = fs; $('#fontSizeVal').textContent = fs;
-        rendition.themes.fontSize(fs+'px'); base.saveProgress();
-      }
+        appSettings.fontSize = fs; $('#fontSizeRange').value = fs; $('#fontSizeVal').textContent = fs; applyReaderStyles(); base.saveProgress();
+      },
+      getLocation(){ return { pct:getPct(), label:'', raw:scrollT } },
+      gotoLocation(y){ if (typeof y==='number') window.scrollTo({top:y, behavior:'instant'}); }
+    });
+  }
 
-      // Поиск
-      async function search(q){
-        if (!q) return [];
-        try {
-          const res = await book.search(q);
-          return res || [];
-        } catch { return []; }
-      }
+  /* ------------------------ БИБЛИОТЕКА --------------------------- */
+  async function importFiles(files){
+    for (const file of files){
+      const ext = (file.name.split('.').pop()||'').toLowerCase();
+      const id = 'file-'+uid();
+      const baseItem = { id, ownerId: TG.user().id, type:'file', name:file.name, size:file.size, created:Date.now(), source:'Локальный файл' };
+      let item = {...baseItem};
 
-      return Object.assign(base, {
-        applyTypography(){ rendition.themes.fontSize(appSettings.fontSize+'px'); },
-        next, prev, zoom,
-        getLocation(){
-          const loc = rendition.currentLocation();
-          const cfi = loc?.start?.cfi || null;
-          const pct = cfi ? Math.round((book.locations.percentageFromCfi(cfi)||0)*100) : 0;
-          return { pct, label: loc?.start?.displayed?.page || '', raw: cfi };
-        },
-        gotoLocation(cfi){ if (cfi) rendition.display(cfi); },
-        buildTOC: async ()=>{
-          await book.ready;
-          const nav = await book.loaded.navigation;
-          return nav.toc || [];
-        },
-        search
-      });
-    }
-
-    /* -------- PDF -------- */
-    function PDFReader(arrayBuffer){
-      const base = makeBaseReader();
-      const host = $('#contentHost');
-      host.innerHTML = '';
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d',{alpha:false});
-      host.appendChild(canvas);
-
-      let pdfDoc = null, pageNum = 1, pageText = {};
-      pdfScale = 1.15;
-
-      pdfjsLib.getDocument({data: arrayBuffer}).promise.then(async (doc)=>{
-        pdfDoc = doc;
-        await renderPage();
-        buildTextIndex(); // не блокируем
-      });
-
-      async function renderPage(){
-        if (!pdfDoc) return;
-        const page = await pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: pdfScale });
-        canvas.width = viewport.width; canvas.height = viewport.height;
-        await page.render({canvasContext:ctx, viewport}).promise;
-        const pct = Math.round((pageNum-1)/(pdfDoc.numPages-1||1)*100);
-        updateProgress(`${pct}% стр. ${pageNum}/${pdfDoc.numPages}`, pct);
-        await base.saveProgress();
-      }
-      async function buildTextIndex(){
-        if (!pdfDoc) return;
-        const lower = [];
-        for (let i=1;i<=pdfDoc.numPages;i++){
-          const page = await pdfDoc.getPage(i);
-          const txt = await page.getTextContent();
-          const s = txt.items.map(it=>it.str).join(' ');
-          pageText[i] = s;
-          lower.push(s.toLowerCase());
-        }
-        textSearchIndex = lower.join('\n');
-      }
-
-      function next(){ if (!pdfDoc) return; if (pageNum<pdfDoc.numPages){ pageNum++; renderPage(); } }
-      function prev(){ if (!pdfDoc) return; if (pageNum>1){ pageNum--; renderPage(); } }
-      function zoom(delta){ pdfScale = clamp(pdfScale + (delta>0?0.1:-0.1), .7, 2.2); renderPage(); }
-
-      document.addEventListener('keydown', onKey);
-      function onKey(e){ if (e.key==='ArrowRight' || e.key==='PageDown') next(); if (e.key==='ArrowLeft'||e.key==='PageUp') prev(); }
-
-      return Object.assign(base,{
-        destroy(){ document.removeEventListener('keydown', onKey); },
-        next, prev, zoom,
-        getLocation(){ const pct = Math.round((pageNum-1)/(pdfDoc?.numPages-1||1)*100)||0; return { pct, label:`стр. ${pageNum}/${pdfDoc?.numPages||'?'}`, raw: pageNum }; },
-        gotoLocation(p){ if (p) { pageNum = clamp(p,1,pdfDoc?.numPages||1); renderPage(); } },
-        buildTOCPages: async ()=> Array.from({length: pdfDoc?.numPages||0}, (_,i)=>({ label:'Стр. '+(i+1), page:i+1 }))
-      });
-    }
-
-    /* -------- ВНЕШНЯЯ ССЫЛКА/СТАТЬЯ (Telegra.ph) -------- */
-    async function fetchExternalArticle(url){
-      const key = 'ext:'+url;
-      const cached = await Store.cacheGet(key);
-      if (cached) return cached;
-
-      try {
-        const res = await fetch(url, {mode:'cors'});
-        const html = await res.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        // Примитивный режим чтения (для telegra.ph довольно чисто)
-        const title = doc.querySelector('meta[property="og:title"]')?.content || doc.querySelector('title')?.textContent || url;
-        const author = doc.querySelector('meta[name="author"]')?.content || doc.querySelector('.author')?.textContent || '';
-        const article = doc.querySelector('article') || doc.querySelector('*[data-article]') || doc.body;
-        const clean = DOMPurify.sanitize(article?.innerHTML || '');
-        const data = { title, author, content: clean, url };
-        await Store.cachePut(key, data);
-        return data;
-      } catch (e){
-        return null; // CORS блок
-      }
-    }
-    function ExternalReader(articleHTML){
-      const base = makeBaseReader();
-      const host = $('#contentHost');
-      host.innerHTML = `<article class="reader-article">${articleHTML}</article>`;
-      applyReaderStyles();
-      textSearchIndex = host.textContent.toLowerCase();
-
-      let scrollT = 0;
-      function getPct(){
-        const el = document.documentElement;
-        const h = el.scrollHeight - el.clientHeight; if (h<=0) return 0; return Math.round((window.scrollY/h)*100);
-      }
-      window.addEventListener('scroll', onScroll, {passive:true});
-      function onScroll(){ scrollT = window.scrollY; base.saveProgress(); }
-
-      return Object.assign(base,{
-        destroy(){ window.removeEventListener('scroll', onScroll);},
-        next(){ window.scrollBy({top: window.innerHeight*0.9, behavior:'smooth'}); },
-        prev(){ window.scrollBy({top: -window.innerHeight*0.9, behavior:'smooth'}); },
-        zoom(delta){
-          const fs = clamp(appSettings.fontSize + (delta>0?1:-1), 14, 28);
-          appSettings.fontSize = fs; $('#fontSizeRange').value = fs; $('#fontSizeVal').textContent = fs; applyReaderStyles(); base.saveProgress();
-        },
-        getLocation(){ return { pct:getPct(), label:'', raw:scrollT } },
-        gotoLocation(y){ if (typeof y==='number') window.scrollTo({top:y, behavior:'instant'}); }
-      });
-    }
-
-    /* ------------------------ БИБЛИОТЕКА --------------------------- */
-    async function importFiles(files){
-      for (const file of files){
-        const ext = (file.name.split('.').pop()||'').toLowerCase();
-        const id = 'file-'+uid();
-        const baseItem = { id, type:'file', name:file.name, size:file.size, created:Date.now(), source:'Локальный файл' };
-        let item = {...baseItem};
-
-        if (['txt','md','markdown'].includes(ext)){
-          // читаем как текст (поддержка крупных файлов через stream)
-          const text = await readFileTextStreaming(file);
-          item.format = ext==='txt'?'txt':'md';
-          item.title = file.name.replace(/\.[^.]+$/,'');
-          item.buffer = text; // храним текст в кеш (можно вынести в IDB cache, но для простоты положим сюда)
-        } else if (ext==='epub'){
-          const buf = await file.arrayBuffer();
-          item.format = 'epub'; item.title = file.name.replace('.epub',''); item.buffer = buf;
-        } else if (ext==='pdf'){
-          const buf = await file.arrayBuffer();
-          item.format = 'pdf'; item.title = file.name.replace('.pdf',''); item.buffer = buf;
-        } else {
-          toast('Неподдерживаемый формат: '+ext); continue;
-        }
-        await Store.saveLibraryItem(item);
-      }
-      await refreshLibrary();
-      toast('Файлы добавлены');
-    }
-
-    async function readFileTextStreaming(file){
-      if (file.stream && TextDecoder && TextDecoderStream){
-        const decoder = new TextDecoderStream('utf-8');
-        const reader = file.stream().pipeThrough(decoder).getReader();
-        let out = '', totalRead = 0;
-        while (true){
-          const {value, done} = await reader.read();
-          if (done) break;
-          out += value; totalRead += value.length;
-        }
-        return out;
+      if (['txt','md','markdown'].includes(ext)){
+        const text = await readFileTextStreaming(file);
+        item.format = ext==='txt'?'txt':'md';
+        item.title = file.name.replace(/\.[^.]+$/,'');
+        item.buffer = text;
+      } else if (ext==='epub'){
+        const buf = await file.arrayBuffer();
+        item.format = 'epub'; item.title = file.name.replace(/\.epub$/i,''); item.buffer = buf;
+      } else if (ext==='pdf'){
+        const buf = await file.arrayBuffer();
+        item.format = 'pdf'; item.title = file.name.replace(/\.pdf$/i,''); item.buffer = buf;
       } else {
-        return await file.text();
+        toast('Неподдерживаемый формат: '+ext); continue;
       }
-    }
-
-    function renderCard(item, listEl){
-      const node = document.importNode($('#tplCard').content, true);
-      const el = node.firstElementChild;
-      const t = el.querySelector('.title');
-      const m = el.querySelector('.muted');
-      const btnRead = el.querySelector('.read');
-      const btnRemove = el.querySelector('.remove');
-
-      t.textContent = item.title || item.name || item.url;
-      m.textContent = item.source || item.format || item.url;
-
-      btnRead.addEventListener('click', ()=> openItem(item));
-      btnRemove.addEventListener('click', async ()=>{
-        if (!confirm('Удалить из локальной библиотеки? Файлы/буфер будут забыты.')) return;
-        await Store.removeLibraryItem(item.id); await refreshLibrary();
-      });
-      listEl.appendChild(el);
-    }
-
-    async function refreshLibrary(){
-      const q = $('#searchInput').value.toLowerCase().trim();
-      const list = await Store.allLibrary();
-      const byRecent = [...list].sort((a,b)=> (b.lastOpened||0)-(a.lastOpened||0));
-      const rec = $('#recentList'); rec.innerHTML='';
-      byRecent.slice(0,5).forEach(it=> renderCard(it, rec));
-
-      const lib = $('#libraryList'); lib.innerHTML='';
-      const filtered = list.filter(it=>{
-        const s = (it.title||it.name||it.url||'').toLowerCase();
-        return !q || s.includes(q);
-      }).sort((a,b)=> (b.created||0)-(a.created||0));
-      filtered.forEach(it=> renderCard(it, lib));
-      $('#emptyLibraryNote').classList.toggle('hidden', !!filtered.length);
-
-      // Предустановленные ссылки (показываем всегда)
-      const linksHost = $('#linksList'); linksHost.innerHTML='';
-      PRESET_LINKS.forEach(link=>{
-        const card = document.importNode($('#tplCard').content, true).firstElementChild;
-        card.querySelector('.title').textContent = link.title;
-        card.querySelector('.muted').textContent = link.source;
-        card.querySelector('.read').textContent = 'Открыть';
-        card.querySelector('.read').addEventListener('click', async ()=>{
-          await Store.saveLibraryItem(link); // добавим в библиотеку для прогресса
-          openItem(link);
-        });
-        card.querySelector('.remove').textContent = 'В библиотеку';
-        card.querySelector('.remove').addEventListener('click', async ()=>{
-          await Store.saveLibraryItem(link); toast('Добавлено в библиотеку'); await refreshLibrary();
-        });
-        linksHost.appendChild(card);
-      });
-    }
-
-    async function openItem(item){
-      currentContent = item;
-      item.lastOpened = Date.now();
       await Store.saveLibraryItem(item);
+    }
+    await refreshLibrary();
+    toast('Файлы добавлены');
+  }
 
-      $('#readerTitle').textContent = item.title || item.name || item.url;
-      $('#readerMeta').textContent  = item.source || (item.type==='link' ? 'Ссылка' : (item.format||''));
-      $('#sidePanel').classList.add('hidden');
-
-      showView('reader');
-      Router.go('#/read/'+item.id);
-
-      // Выбор рендера
-      if (item.type==='file'){
-        if (item.format==='txt'){ currentReader = TextReader(item.buffer, false); }
-        else if (item.format==='md'){ currentReader = TextReader(item.buffer, true); buildTOCFromHeadings(); }
-        else if (item.format==='epub'){ currentReader = EPUBReader(item.buffer); setTimeout(buildTOC_EPUB, 400); }
-        else if (item.format==='pdf'){ currentReader = PDFReader(item.buffer); setTimeout(buildTOC_PDF, 400); }
-      } else if (item.type==='link'){
-        const art = await fetchExternalArticle(item.url);
-        if (art){
-          currentReader = ExternalReader(`<h1>${escapeHtml(art.title)}</h1>${art.author?`<div class="muted" style="margin-bottom:1rem">${escapeHtml(art.author)}</div>`:''}${art.content}`);
-          buildTOCFromHeadings();
-        } else {
-          // CORS — откроем в веб-вью Telegram/браузере
-          TG.openLink(item.url);
-          toast('Открыли внешним способом (CORS). Прогресс внутри сайта не отслеживается.');
-          return;
-        }
+  async function readFileTextStreaming(file){
+    if (file.stream && TextDecoder && window.TextDecoderStream){
+      const decoder = new TextDecoderStream('utf-8');
+      const reader = file.stream().pipeThrough(decoder).getReader();
+      let out = '';
+      while (true){
+        const {value, done} = await reader.read();
+        if (done) break;
+        out += value;
       }
+      return out;
+    } else { return await file.text(); }
+  }
 
-      // восстановить прогресс
-      const pr = await Store.getProgress(TG.user().id, item.id);
-      if (pr?.raw!=null) setTimeout(()=> currentReader?.gotoLocation(pr.raw), 200);
+  function renderCard(item, listEl){
+    const node = document.importNode($('#tplCard').content, true);
+    const el = node.firstElementChild;
+    const t = el.querySelector('.title');
+    const m = el.querySelector('.muted');
+    const btnRead = el.querySelector('.read');
+    const btnRemove = el.querySelector('.remove');
 
-      updateMainButton();
+    t.textContent = item.title || item.name || item.url;
+    m.textContent = (item.source || item.format || item.url) + (item.ownerId && item.ownerId!=='local' ? ' • 👤' : '');
+
+    btnRead.addEventListener('click', ()=> openItem(item));
+    btnRemove.addEventListener('click', async ()=>{
+      if (!confirm('Удалить из локальной библиотеки?')) return;
+      await Store.removeLibraryItem(item.id); await refreshLibrary();
+    });
+    listEl.appendChild(el);
+  }
+
+  async function refreshLibrary(){
+    const q = $('#searchInput').value.toLowerCase().trim();
+    const list = await Store.allLibrary();
+
+    // Лениво проставим ownerId старым записям
+    for (const it of list){
+      if (!it.ownerId){ it.ownerId = 'local'; await Store.saveLibraryItem(it); }
     }
 
-    async function clearThisBook(contentId){
-      await Store.saveProgress(TG.user().id, contentId, { pct:0, label:'', raw:null, ts:Date.now() });
-      await Store.saveNotes(TG.user().id, contentId, []);
-      toast('Данные очищены');
-    }
+    const mine = list.filter(x=> (x.ownerId||'local') === TG.user().id || (TG.user().id==='local' && (x.ownerId==='local'||!x.ownerId)));
 
-    function navigateToLibrary(){ Router.go('#/library'); showView('library'); }
+    const byRecent = [...mine].sort((a,b)=> (b.lastOpened||0)-(a.lastOpened||0));
+    const rec = $('#recentList'); rec.innerHTML='';
+    byRecent.slice(0,5).forEach(it=> renderCard(it, rec));
 
-    /* -------------------- ОГЛАВЛЕНИЕ / ПОИСК ---------------------- */
-    function openSidePanelTOC(){
-      const body = $('#sidePanelBody'); body.innerHTML='';
-      $('#sidePanelTitle').textContent = 'Оглавление';
+    const lib = $('#libraryList'); lib.innerHTML='';
+    const filtered = mine.filter(it=>{
+      const s = (it.title||it.name||it.url||'').toLowerCase();
+      return !q || s.includes(q);
+    }).sort((a,b)=> (b.created||0)-(a.created||0));
+    filtered.forEach(it=> renderCard(it, lib));
+    $('#emptyLibraryNote').classList.toggle('hidden', !!filtered.length);
 
-      if (currentContent?.format==='pdf' && currentReader?.buildTOCPages){
-        currentReader.buildTOCPages().then(pages=>{
-          pages.forEach(p=>{
-            const a = document.createElement('button'); a.className='btn-ghost'; a.textContent = p.label;
-            a.addEventListener('click', ()=> currentReader.gotoLocation(p.page));
-            body.appendChild(a);
-          });
-        });
-      } else if (currentContent?.format==='epub' && currentReader?.buildTOC){
-        currentReader.buildTOC().then(toc=>{
-          toc.forEach(item=>{
-            const a = document.createElement('button'); a.className='btn-ghost'; a.textContent = item.label||item.id;
-            a.addEventListener('click', ()=> currentReader.gotoLocation(item.href));
-            body.appendChild(a);
-          });
-        });
-      } else {
-        // MD/TXT/External — по заголовкам h1..h6
-        buildTOCFromHeadings();
-      }
-
-      $('#sidePanel').classList.remove('hidden');
-    }
-
-    function buildTOCFromHeadings(){
-      const body = $('#sidePanelBody'); body.innerHTML='';
-      $('#sidePanelTitle').textContent = 'Оглавление';
-      const heads = $$('#contentHost h1, #contentHost h2, #contentHost h3, #contentHost h4');
-      if (!heads.length){ body.textContent='Оглавление не найдено'; $('#sidePanel').classList.remove('hidden'); return; }
-      heads.forEach(h=>{
-        const btn = document.createElement('button'); btn.className='btn-ghost';
-        btn.textContent = (h.tagName + ' • ' + h.textContent).replace(/H(\d)/,'§$1');
-        btn.addEventListener('click', ()=> h.scrollIntoView({behavior:'smooth', block:'start'}));
-        body.appendChild(btn);
+    // Предустановки — показываем всегда (при открытии добавим ownerId)
+    const linksHost = $('#linksList'); linksHost.innerHTML='';
+    PRESET_LINKS.forEach(link=>{
+      const card = document.importNode($('#tplCard').content, true).firstElementChild;
+      card.querySelector('.title').textContent = link.title;
+      card.querySelector('.muted').textContent = link.source;
+      card.querySelector('.read').textContent = 'Открыть';
+      card.querySelector('.read').addEventListener('click', async ()=>{
+        const copy = { ...link, ownerId: TG.user().id, created:Date.now() };
+        await Store.saveLibraryItem(copy);
+        openItem(copy);
       });
-      $('#sidePanel').classList.remove('hidden');
-    }
-    function buildTOC_EPUB(){ openSidePanelTOC(); $('#sidePanel').classList.add('hidden'); }
-    function buildTOC_PDF(){ openSidePanelTOC(); $('#sidePanel').classList.add('hidden'); }
+      card.querySelector('.remove').textContent = 'В библиотеку';
+      card.querySelector('.remove').addEventListener('click', async ()=>{
+        const copy = { ...link, ownerId: TG.user().id, created:Date.now() };
+        await Store.saveLibraryItem(copy); toast('Добавлено в библиотеку'); await refreshLibrary();
+      });
+      linksHost.appendChild(card);
+    });
+  }
 
-    async function findDialog(){
-      const dlg = $('#dlgPrompt'); $('#dlgPromptTitle').textContent='Поиск по тексту'; $('#dlgPromptText').value='';
-      dlg.showModal();
-      const ok = await waitDialog(dlg);
-      if (!ok) return;
-      const q = $('#dlgPromptText').value.trim().toLowerCase();
-      if (!q){ toast('Пустой запрос'); return; }
+  async function openItem(item){
+    currentContent = item;
+    item.lastOpened = Date.now();
+    await Store.saveLibraryItem(item);
 
-      if (currentContent?.format==='epub' && currentReader?.search){
-        const res = await currentReader.search(q);
-        const body = $('#sidePanelBody'); body.innerHTML='';
-        $('#sidePanelTitle').textContent = 'Результаты поиска';
-        (res||[]).slice(0,100).forEach(hit=>{
-          const b = document.createElement('button'); b.className='btn-ghost';
-          b.textContent = hit.excerpt?.replace(/\s+/g,' ').slice(0,120) || hit.cfi;
-          b.addEventListener('click', ()=> currentReader.gotoLocation(hit.cfi||hit.href));
-          body.appendChild(b);
-        });
-        $('#sidePanel').classList.remove('hidden');
-        toast((res?.length||0)+' результатов');
+    $('#readerTitle').textContent = item.title || item.name || item.url;
+    $('#readerMeta').textContent  = item.source || (item.type==='link' ? 'Ссылка' : (item.format||''));
+    $('#sidePanel').classList.add('hidden');
+
+    showView('reader');
+    Router.go('#/read/'+item.id);
+
+    if (item.type==='file'){
+      if (item.format==='txt'){ currentReader = TextReader(item.buffer, false); }
+      else if (item.format==='md'){ currentReader = TextReader(item.buffer, true); buildTOCFromHeadings(); }
+      else if (item.format==='epub'){ currentReader = EPUBReader(item.buffer); setTimeout(buildTOC_EPUB, 400); }
+      else if (item.format==='pdf'){ currentReader = PDFReader(item.buffer); setTimeout(buildTOC_PDF, 400); }
+    } else if (item.type==='link'){
+      const art = await fetchExternalArticle(item.url);
+      if (art){
+        currentReader = ExternalReader(`<h1>${escapeHtml(art.title)}</h1>${art.author?`<div class="muted" style="margin-bottom:1rem">${escapeHtml(art.author)}</div>`:''}${art.content}`);
+        buildTOCFromHeadings();
+      } else {
+        TG.openLink(item.url);
+        toast('Открыли внешним способом (CORS). Прогресс внутри сайта не отслеживается.');
         return;
       }
-
-      if (textSearchIndex){
-        const idx = textSearchIndex.indexOf(q);
-        if (idx>=0){
-          toast('Найдено — перемещаю');
-          if (currentReader?.gotoLocation) currentReader.gotoLocation(idx);
-        } else toast('Не найдено');
-      } else toast('Поиск для этого формата пока недоступен');
     }
 
-    function waitDialog(dlg){
-      return new Promise(res=>{
-        function onClose(e){ dlg.removeEventListener('close', onClose); res(dlg.returnValue==='default'); }
-        dlg.addEventListener('close', onClose);
+    const pr = await Store.getProgress(TG.user().id, item.id);
+    if (pr?.raw!=null) setTimeout(()=> currentReader?.gotoLocation(pr.raw), 200);
+
+    updateMainButton();
+  }
+
+  async function clearThisBook(contentId){
+    await Store.saveProgress(TG.user().id, contentId, { pct:0, label:'', raw:null, ts:Date.now() });
+    await Store.saveNotes(TG.user().id, contentId, []);
+    toast('Данные очищены');
+  }
+
+  function navigateToLibrary(){ Router.go('#/library'); showView('library'); }
+
+  /* -------------------- ОГЛАВЛЕНИЕ / ПОИСК ---------------------- */
+  function openSidePanelTOC(){
+    const body = $('#sidePanelBody'); body.innerHTML='';
+    $('#sidePanelTitle').textContent = 'Оглавление';
+
+    if (currentContent?.format==='pdf' && currentReader?.buildTOCPages){
+      currentReader.buildTOCPages().then(pages=>{
+        pages.forEach(p=>{
+          const a = document.createElement('button'); a.className='btn-ghost'; a.textContent = p.label;
+          a.addEventListener('click', ()=> currentReader.gotoLocation(p.page));
+          body.appendChild(a);
+        });
       });
+    } else if (currentContent?.format==='epub' && currentReader?.buildTOC){
+      currentReader.buildTOC().then(toc=>{
+        toc.forEach(item=>{
+          const a = document.createElement('button'); a.className='btn-ghost'; a.textContent = item.label||item.id;
+          a.addEventListener('click', ()=> currentReader.gotoLocation(item.href));
+          body.appendChild(a);
+        });
+      });
+    } else {
+      buildTOCFromHeadings();
+    }
+    $('#sidePanel').classList.remove('hidden');
+  }
+
+  function buildTOCFromHeadings(){
+    const body = $('#sidePanelBody'); body.innerHTML='';
+    $('#sidePanelTitle').textContent = 'Оглавление';
+    const heads = $$('#contentHost h1, #contentHost h2, #contentHost h3, #contentHost h4');
+    if (!heads.length){ body.textContent='Оглавление не найдено'; $('#sidePanel').classList.remove('hidden'); return; }
+    heads.forEach(h=>{
+      const btn = document.createElement('button'); btn.className='btn-ghost';
+      btn.textContent = (h.tagName + ' • ' + h.textContent).replace(/H(\d)/,'§$1');
+      btn.addEventListener('click', ()=> h.scrollIntoView({behavior:'smooth', block:'start'}));
+      body.appendChild(btn);
+    });
+    $('#sidePanel').classList.remove('hidden');
+  }
+  function buildTOC_EPUB(){ openSidePanelTOC(); $('#sidePanel').classList.add('hidden'); }
+  function buildTOC_PDF(){ openSidePanelTOC(); $('#sidePanel').classList.add('hidden'); }
+
+  async function findDialog(){
+    const dlg = $('#dlgPrompt'); $('#dlgPromptTitle').textContent='Поиск по тексту'; $('#dlgPromptText').value='';
+    dlg.showModal();
+    const ok = await waitDialog(dlg); if (!ok) return;
+    const q = $('#dlgPromptText').value.trim().toLowerCase(); if (!q){ toast('Пустой запрос'); return; }
+
+    if (currentContent?.format==='epub' && currentReader?.search){
+      const res = await currentReader.search(q);
+      const body = $('#sidePanelBody'); body.innerHTML='';
+      $('#sidePanelTitle').textContent = 'Результаты поиска';
+      (res||[]).slice(0,100).forEach(hit=>{
+        const b = document.createElement('button'); b.className='btn-ghost';
+        b.textContent = hit.excerpt?.replace(/\s+/g,' ').slice(0,120) || hit.cfi;
+        b.addEventListener('click', ()=> currentReader.gotoLocation(hit.cfi||hit.href));
+        body.appendChild(b);
+      });
+      $('#sidePanel').classList.remove('hidden');
+      toast((res?.length||0)+' результатов');
+      return;
     }
 
-    /* -------------------- ЗАКЛАДКИ / ЗАМЕТКИ ---------------------- */
-    async function addBookmark(){
-      if (!currentReader || !currentContent) return;
-      await currentReader.saveProgress();
-      toast('Закладка сохранена (текущая позиция)');
+    if (textSearchIndex){
+      const idx = textSearchIndex.indexOf(q);
+      if (idx>=0){ toast('Найдено — перемещаю'); currentReader?.gotoLocation(idx); }
+      else toast('Не найдено');
+    } else toast('Поиск для этого формата пока недоступен');
+  }
+
+  function waitDialog(dlg){
+    return new Promise(res=>{
+      function onClose(){ dlg.removeEventListener('close', onClose); res(dlg.returnValue==='default'); }
+      dlg.addEventListener('close', onClose);
+    });
+  }
+
+  /* -------------------- ЗАКЛАДКИ / ЗАМЕТКИ ---------------------- */
+  async function addBookmark(){
+    if (!currentReader || !currentContent) return;
+    await currentReader.saveProgress();
+    toast('Закладка сохранена');
+  }
+
+  async function addNoteDialog(){
+    if (!currentReader || !currentContent) return;
+    const sel = window.getSelection(); const selected = sel?.toString()?.trim();
+    const dlg = $('#dlgPrompt'); $('#dlgPromptTitle').textContent='Заметка'; $('#dlgPromptText').value = selected ? (`Цитата: "${selected}"\n\nЗаметка:`) : '';
+    dlg.showModal();
+    const ok = await waitDialog(dlg); if (!ok) return;
+    const text = $('#dlgPromptText').value.trim(); if (!text) return;
+
+    const pr = await Store.getProgress(TG.user().id, currentContent.id) || {};
+    const list = (await Store.getNotes(TG.user().id, currentContent.id))?.notes || [];
+    list.push({ id: uid(), ts:Date.now(), at: pr.raw??null, pct: pr.pct??0, quote: selected||'', text });
+    await Store.saveNotes(TG.user().id, currentContent.id, list);
+    toast('Заметка добавлена');
+  }
+
+  async function exportAllNotes(){
+    // простой экспорт по всем книгам текущего пользователя
+    const all = await DB.getAll('notes');
+    const my = (all||[]).filter(n => n.userId === TG.user().id);
+    const txt = my.map(n=>`Книга: ${n.contentId}\n`+(n.notes||[]).map(m=>`— (${m.pct||0}%) ${m.quote?`"${m.quote}" `:''}${m.text}`).join('\n')).join('\n\n');
+    const blob = new Blob([txt || 'Нет заметок'], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'notes.txt'; a.click();
+  }
+
+  /* ---------------------- MAIN BUTTON ---------------------- */
+  function updateMainButton(){
+    if (!(window.Telegram && Telegram.WebApp)) return;
+    const route = Router.parse().name;
+    if (route==='library'){
+      Telegram.WebApp.MainButton.setParams({text:'Открыть файл', is_visible:true});
+      Telegram.WebApp.MainButton.onClick(()=> $('#fileInput').click());
+    } else if (route==='read'){
+      Telegram.WebApp.MainButton.setParams({text:'Оглавление', is_visible:true});
+      Telegram.WebApp.MainButton.onClick(()=> openSidePanelTOC());
+    } else if (route==='settings'){
+      Telegram.WebApp.MainButton.setParams({text:'Продолжить чтение', is_visible: !!currentContent});
+      Telegram.WebApp.MainButton.onClick(()=> { if(currentContent) Router.go('#/read/'+currentContent.id); });
     }
+  }
 
-    async function addNoteDialog(){
-      if (!currentReader || !currentContent) return;
-      const sel = window.getSelection(); const selected = sel?.toString()?.trim();
-      const dlg = $('#dlgPrompt'); $('#dlgPromptTitle').textContent='Заметка'; $('#dlgPromptText').value = selected ? (`Цитата: "${selected}"\n\nЗаметка:`) : '';
-      dlg.showModal();
-      const ok = await waitDialog(dlg); if (!ok) return;
-      const text = $('#dlgPromptText').value.trim(); if (!text) return;
+  /* --------------------------- РОУТИНГ --------------------------- */
+  window.addEventListener('hashchange', onRoute);
+  async function onRoute(){
+    const r = Router.parse();
+    if (r.name==='library'){ showView('library'); }
+    else if (r.name==='settings'){ showView('settings'); }
+    else if (r.name==='read' && r.params[0]){
+      const id = r.params[0];
+      const all = await Store.allLibrary();
+      const item = all.find(x=>x.id===id) || PRESET_LINKS.find(x=>x.id===id);
+      if (item) openItem(item); else { toast('Материал не найден'); navigateToLibrary(); }
+    } else { navigateToLibrary(); }
+  }
 
-      const pr = await Store.getProgress(TG.user().id, currentContent.id) || {};
-      const list = (await Store.getNotes(TG.user().id, currentContent.id))?.notes || [];
-      list.push({ id: uid(), ts:Date.now(), at: pr.raw??null, pct: pr.pct??0, quote: selected||'', text });
-      await Store.saveNotes(TG.user().id, currentContent.id, list);
-      toast('Заметка добавлена');
-    }
+  /* --------------------- ИНИЦИАЛИЗАЦИЯ ----------------------- */
+  async function loadSettings(){
+    appSettings.theme = await Store.getSetting('theme') ?? 'beige';
+    appSettings.fontSize = await Store.getSetting('fontSize') ?? 18;
+    appSettings.lineHeight = await Store.getSetting('lineHeight') ?? 1.55;
+    appSettings.columnWidth = await Store.getSetting('columnWidth') ?? '72ch';
+    appSettings.textAlign = await Store.getSetting('textAlign') ?? 'start';
+    appSettings.fontFamily = await Store.getSetting('fontFamily') ?? 'system-ui';
 
-    async function exportAllNotes(){
-      const list = await Store.getAll ? await Store.getAll('notes') : [];
-      const notesPerBook = await DB.getAll('notes'); // прямой вызов
-      const arr = notesPerBook || [];
-      const txt = arr.map(n=>`[${new Date(n.ts||Date.now()).toLocaleString()}] ${n.contentId}\n${(n.notes||[]).map(m=>`— (${m.pct||0}%) ${m.quote?`"${m.quote}" `:''}${m.text}`).join('\n')}`).join('\n\n');
-      const blob = new Blob([txt || 'Нет заметок'], {type:'text/plain;charset=utf-8'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'notes.txt'; a.click();
-    }
+    $$('input[name="theme"]').forEach(r=> r.checked = (r.value===appSettings.theme));
+    $('#fontSizeRange').value = appSettings.fontSize; $('#fontSizeVal').textContent = appSettings.fontSize;
+    const lh = Math.round(appSettings.lineHeight*100); $('#lineHeightRange').value = lh; $('#lineHeightVal').textContent = appSettings.lineHeight;
+    $('#columnWidth').value = appSettings.columnWidth; $('#textAlign').value = appSettings.textAlign; $('#fontFamily').value = appSettings.fontFamily;
 
-    /* ---------------------- MAIN BUTTON LOGIC ---------------------- */
-    function updateMainButton(){
-      if (!TG.available()) return;
-      const route = Router.parse().name;
-      if (route==='library'){
-        Telegram.WebApp.MainButton.setParams({text:'Открыть файл', is_visible:true});
-        Telegram.WebApp.MainButton.onClick(()=> $('#fileInput').click());
-      } else if (route==='read'){
-        Telegram.WebApp.MainButton.setParams({text:'Оглавление', is_visible:true});
-        Telegram.WebApp.MainButton.onClick(()=> openSidePanelTOC());
-      } else if (route==='settings'){
-        Telegram.WebApp.MainButton.setParams({text:'Продолжить чтение', is_visible: !!currentContent});
-        Telegram.WebApp.MainButton.onClick(()=> { if(currentContent) Router.go('#/read/'+currentContent.id); });
-      }
-    }
+    if (appSettings.theme==='auto') TG.setTheme(appSettings.appliedTheme);
+    else document.body.setAttribute('data-theme', appSettings.theme);
 
-    /* --------------------------- РОУТИНГ --------------------------- */
-    window.addEventListener('hashchange', onRoute);
-    async function onRoute(){
-      const r = Router.parse();
-      if (r.name==='library'){ showView('library'); }
-      else if (r.name==='settings'){ showView('settings'); }
-      else if (r.name==='read' && r.params[0]){
-        const id = r.params[0];
-        const all = await Store.allLibrary();
-        const item = all.find(x=>x.id===id) || PRESET_LINKS.find(x=>x.id===id);
-        if (item) openItem(item); else { toast('Материал не найден'); navigateToLibrary(); }
-      } else { navigateToLibrary(); }
-    }
+    applyReaderStyles();
+  }
 
-    /* --------------------- ИНИЦИАЛИЗАЦИЯ APP ----------------------- */
-    async function loadSettings(){
-      appSettings.theme = await Store.getSetting('theme') ?? 'auto';
-      appSettings.fontSize = await Store.getSetting('fontSize') ?? 18;
-      appSettings.lineHeight = await Store.getSetting('lineHeight') ?? 1.55;
-      appSettings.columnWidth = await Store.getSetting('columnWidth') ?? '72ch';
-      appSettings.textAlign = await Store.getSetting('textAlign') ?? 'start';
-      appSettings.fontFamily = await Store.getSetting('fontFamily') ?? 'system-ui';
+  function attachSwipe(el, onLeft, onRight){
+    el.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; touchStartX=t.clientX; touchStartY=t.clientY; }, {passive:true});
+    el.addEventListener('touchend', (e)=>{
+      const t=e.changedTouches[0]; const dx=t.clientX-touchStartX; const dy=t.clientY-touchStartY;
+      if (Math.abs(dx)>60 && Math.abs(dy)<40){ if (dx<0) onLeft?.(); else onRight?.(); }
+    }, {passive:true});
+  }
 
-      // UI отражение
-      $$('input[name="theme"]').forEach(r=> r.checked = (r.value===appSettings.theme));
-      $('#fontSizeRange').value = appSettings.fontSize; $('#fontSizeVal').textContent = appSettings.fontSize;
-      const lh = Math.round(appSettings.lineHeight*100); $('#lineHeightRange').value = lh; $('#lineHeightVal').textContent = appSettings.lineHeight;
-      $('#columnWidth').value = appSettings.columnWidth; $('#textAlign').value = appSettings.textAlign; $('#fontFamily').value = appSettings.fontFamily;
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
-      // Тема
-      if (appSettings.theme==='auto') TG.setTheme(appSettings.appliedTheme);
-      else TG.setTheme(appSettings.theme);
-      applyReaderStyles();
-    }
+  async function boot(){
+    TG.init();            // автологин/автотема в Telegram
+    await loadSettings(); // применяем сохранённые настройки
+    await refreshLibrary();
+    onRoute();
+  }
+  document.addEventListener('DOMContentLoaded', boot);
 
-    async function boot(){
-      TG.init();
-      await loadSettings();
-      await refreshLibrary();
-      onRoute();
-    }
-    document.addEventListener('DOMContentLoaded', boot);
-
-    /* --------------------------- HELPERS --------------------------- */
-    function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-
-  })();
-  </script>
+})();
+</script>
 </body>
 </html>
