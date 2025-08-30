@@ -3,310 +3,115 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>КЛАДОВАЯ • Читалка</title>
+<title>КЛАДОВАЯ • Библиотека</title>
 
-<!-- Telegram Mini App SDK -->
+<!-- Telegram Mini App SDK (опционально) -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<!-- Лёгкие библиотеки -->
-<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3/dist/epub.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.js"></script>
-<script>
-  if (window["pdfjsLib"]) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.js";
-  }
-</script>
 
 <style>
   :root{
-    /* БАЗА (beige по умолчанию) */
-    --bg:#F2E8D9;
-    --bg-grad: linear-gradient(180deg,#F7EEDF 0%, #EFE1CE 100%);
+    --bg:#F2E8D9; --bg-grad: linear-gradient(180deg,#F7EEDF 0%, #EFE1CE 100%);
     --text:#2B2622; --accent:#B88B5A; --hint:#7b6e64;
     --card:#FFF9F0; --border:#E8DAC6; --shadow:0 10px 30px rgba(94,62,24,.08);
     --toolbar: color-mix(in oklab, #FFF9F0 85%, transparent);
-    --muted:#9b8c80;
-    --reader-max: 78ch;
-
-    /* альтернативные темы */
-    --dark-bg:#1C1C1D; --dark-text:#ffffff;
-    --sepia-bg:#F5ECD9; --sepia-text:#3B2F2A;
-  }
-  [data-theme="beige"] { /* по умолчанию */
-    --bg:#F2E8D9; --bg-grad: linear-gradient(180deg,#F7EEDF 0%, #EFE1CE 100%);
-    --text:#2B2622; --accent:#B88B5A; --card:#FFF9F0; --border:#E8DAC6;
-    --toolbar: color-mix(in oklab, #FFF9F0 82%, transparent);
   }
   [data-theme="light"] { --bg:#FAFAFA; --bg-grad: linear-gradient(180deg,#FFFFFF 0%, #F6F7F9 100%); --text:#111; --accent:#3390EC; --card:#fff; --border:#e5e7eb; --toolbar:#ffffffcc; }
-  [data-theme="dark"]  { --bg:var(--dark-bg); --bg-grad: linear-gradient(180deg,#1C1C1D,#131314); --text:var(--dark-text); --accent:#3390EC; --card:#202022; --border:#2a2a2b; --toolbar:#1c1c1dcc; }
-  [data-theme="sepia"] { --bg:var(--sepia-bg); --bg-grad: linear-gradient(180deg,#F9EFDC,#EEDDC2); --text:var(--sepia-text); --accent:#8A5A44; --card:#F7EFDF; --border:#e6dcc7; --toolbar:#f5ecd9cc; }
+  [data-theme="dark"]  { --bg:#1C1C1D; --bg-grad: linear-gradient(180deg,#1C1C1D,#131314); --text:#fff; --accent:#3390EC; --card:#202022; --border:#2a2a2b; --toolbar:#1c1c1dcc; }
 
   html,body{height:100%}
-  body{
-    margin:0; color:var(--text);
-    background: var(--bg-grad);
-    font:400 16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,"Noto Sans",sans-serif;
-    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
-  }
+  body{margin:0;color:var(--text);background:var(--bg-grad);font:400 16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,"Noto Sans",sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
-  a{color:var(--accent); text-decoration:none}
-  button{cursor:pointer}
-  .container{max-width:1100px; margin:0 auto; padding:16px}
-  .grid{display:grid; gap:12px}
-  .grid.cards{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
-  .card{
-    background:var(--card); border:1px solid var(--border); border-radius:18px; padding:16px; box-shadow:var(--shadow);
-  }
-  .title{font-weight:700; letter-spacing:.2px}
+  .container{max-width:1100px;margin:0 auto;padding:16px}
+  .toolbar{position:sticky;top:0;z-index:30;backdrop-filter:saturate(1.2) blur(8px);background:var(--toolbar);border-bottom:1px solid var(--border)}
+  .toolbar-inner{display:flex;align-items:center;gap:8px;min-height:60px;padding:8px 16px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700}
+  .grid{display:grid;gap:12px}
+  .grid.cards{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+  .title{font-weight:700}
   .muted{color:var(--hint)}
-  .toolbar{
-    position:sticky; top:0; z-index:30; backdrop-filter:saturate(1.2) blur(8px);
-    background:var(--toolbar); border-bottom:1px solid var(--border);
-  }
-  .toolbar-inner{display:flex; align-items:center; gap:8px; min-height:60px; padding:8px 16px}
-  .logo{display:flex; align-items:center; gap:10px; font-weight:700}
-  .logo svg{width:22px;height:22px}
-  .spacer{flex:1}
-  .btn, .btn-ghost{
-    border-radius:14px; padding:10px 14px; border:1px solid var(--border); background:var(--card);
-    transition:.15s transform ease;
-  }
-  .btn:active{transform:translateY(1px)}
-  .btn-primary{
-    background:var(--accent); color:#fff; border-color:transparent;
-  }
-  .btn-ghost{background:transparent}
-  .pill{display:inline-flex; align-items:center; gap:8px; border-radius:999px; padding:8px 12px; background:var(--card); border:1px solid var(--border)}
-  .search{display:flex; gap:8px; align-items:center; padding:8px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card)}
-  input, select{background:transparent; color:inherit; border:1px solid var(--border); border-radius:12px; padding:10px 12px; outline:none}
-  input:focus, select:focus{box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 30%, transparent)}
-  .footerbar{
-    position:sticky; bottom:0; z-index:20; background:var(--toolbar); border-top:1px solid var(--border);
-  }
-  .footer-inner{display:flex; align-items:center; gap:8px; min-height:56px; padding:8px 16px}
-  .progress{
-    height:6px; background:var(--border); border-radius:999px; overflow:hidden;
-  }
-  .progress > span{display:block; height:100%; background:var(--accent); width:0%}
-  .hidden{display:none !important}
-  .reader{
-    margin:0 auto; padding:20px; max-width:var(--reader-max);
-  }
-  .reader p{margin:0 0 1em}
-  .reader img{max-width:100%; border-radius:10px}
-  .reader blockquote{margin:1em 0; padding:0.5em 1em; border-left:4px solid var(--accent); background:color-mix(in oklab, var(--accent) 10%, transparent); border-radius:8px}
-  .reader pre, .reader code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace }
-  .kbd{font:500 12px/1 ui-monospace,monospace; padding:4px 6px; border:1px solid var(--border); border-radius:6px; background:var(--card)}
-  .dropzone{
-    border:2px dashed var(--border); border-radius:16px; padding:24px; text-align:center; transition:.2s;
-  }
-  .dropzone.dragover{border-color:var(--accent); background:color-mix(in oklab, var(--accent) 10%, transparent)}
-  .toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#111c; color:#fff; padding:10px 14px; border-radius:10px; z-index:80}
-  .menu{position:relative}
-  .menu > .menu-list{position:absolute; right:0; top:calc(100% + 8px); background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); padding:8px; min-width:240px; display:none}
-  .menu.open > .menu-list{display:block}
-  .toc{max-height:50vh; overflow:auto}
+  .btn,.btn-ghost{border-radius:14px;padding:10px 14px;border:1px solid var(--border);background:var(--card);cursor:pointer}
+  .btn-primary{background:var(--accent);color:#fff;border-color:transparent}
+  .search{display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+  input,select{background:transparent;color:inherit;border:1px solid var(--border);border-radius:12px;padding:10px 12px;outline:none}
+  .pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;background:var(--card);border:1px solid var(--border)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111c;color:#fff;padding:10px 14px;border-radius:10px;z-index:80}
+  .hidden{display:none!important}
+  .toc{max-height:60vh;overflow:auto}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-
-  /* Мобильные правки */
-  @media (max-width: 640px){
-    .container{padding:12px}
-    .toolbar-inner{min-height:56px; padding:6px 12px}
-    .grid.cards{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
-    .search{display:none} /* меньше шума в шапке */
-    .reader{padding:14px}
-    .footer-inner{gap:6px}
-  }
+  @media (max-width:640px){.container{padding:12px}.toolbar-inner{min-height:56px}.grid.cards{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
 </style>
 </head>
-<body data-theme="beige">
-  <!-- Верхняя панель -->
-  <header class="toolbar" role="banner" aria-label="Верхняя панель">
+<body>
+  <header class="toolbar" role="banner">
     <div class="toolbar-inner container">
       <div class="logo" id="appLogo" title="На главную" role="link" tabindex="0">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H9l-5 3V7Z" stroke="currentColor" stroke-width="1.5"/></svg>
-        <span>КЛАДОВАЯ • Читалка</span>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true"><path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H9l-5 3V7Z" stroke="currentColor" stroke-width="1.5"/></svg>
+        <span>КЛАДОВАЯ • Библиотека</span>
       </div>
-      <div class="spacer"></div>
-
+      <div class="spacer" style="flex:1"></div>
       <div class="search" role="search">
         <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="m21 21l-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0a7 7 0 0 1 14 0Z"/></svg>
-        <input id="searchInput" type="search" placeholder="Поиск по библиотеке…" aria-label="Поиск по библиотеке">
+        <input id="searchInput" type="search" placeholder="Поиск по библиотеке…" aria-label="Поиск по библиотеке"/>
       </div>
-
-      <div class="menu" id="mainMenu">
+      <div class="menu" id="mainMenu" style="position:relative">
         <button class="btn-ghost" aria-haspopup="menu" aria-expanded="false" title="Меню">☰</button>
-        <div class="menu-list" role="menu" aria-label="Главное меню">
-          <!-- Важно: label-for, чтобы системный пикер сработал внутри Telegram WebView -->
-          <label class="btn" role="menuitem" for="fileInput" id="btnImport">Загрузить файл</label>
-          <button class="btn" role="menuitem" id="btnAddLink">Добавить ссылку</button>
-          <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
+        <div class="menu-list card" role="menu" aria-label="Главное меню" style="position:absolute;right:0;top:calc(100% + 8px);display:none;min-width:260px">
+          <label class="btn" role="menuitem" for="fileInput">Импорт JSON</label>
+          <button class="btn" role="menuitem" id="btnAddUrl">Добавить по URL</button>
+          <button class="btn" role="menuitem" id="btnLoadIndex">Загрузить library.json</button>
+          <hr style="border:none;border-top:1px solid var(--border);margin:8px 0"/>
           <button class="btn" role="menuitem" id="btnSettings">Настройки</button>
-          <button class="btn" role="menuitem" id="btnExportNotes">Экспорт заметок</button>
           <button class="btn" role="menuitem" id="btnClearAll">Очистить все данные…</button>
         </div>
       </div>
+      <input id="fileInput" type="file" accept="application/json,.json" hidden multiple />
     </div>
   </header>
 
-  <!-- Основные экраны -->
   <main id="app" class="container" role="main">
-    <!-- Домашний экран / Библиотека -->
     <section id="view-library" class="grid" aria-labelledby="lib-heading">
       <h2 id="lib-heading" class="sr-only">Библиотека</h2>
 
       <div class="grid" style="gap:16px">
         <div class="card">
           <div style="display:flex;align-items:center;gap:12px;justify-content:space-between">
-            <div class="title">Продолжить</div>
-            <div class="muted">последние материалы</div>
-          </div>
-          <div id="recentList" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:8px; margin-top:8px"></div>
-        </div>
-
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:12px;justify-content:space-between">
             <div class="title">Библиотека</div>
             <div class="pill">
-              <input type="file" id="fileInput" accept=".txt,.md,.markdown,.pdf,.epub,application/epub+zip,application/pdf,text/plain,text/markdown" hidden />
-              <label class="btn" id="btnOpenFile" for="fileInput">Открыть файл</label>
-              <button class="btn" id="btnOpenDrop">Drag & Drop</button>
+              <label class="btn" for="fileInput">Импорт JSON</label>
+              <button class="btn" id="btnAddUrl2">URL</button>
+              <button class="btn" id="btnLoadIndex2">library.json</button>
             </div>
           </div>
           <div id="libraryList" class="grid cards" style="margin-top:8px"></div>
-          <div id="emptyLibraryNote" class="muted" style="margin-top:8px">Добавьте файл или ссылку, чтобы начать читать.</div>
-          <div id="dropZone" class="dropzone hidden" aria-label="Область перетаскивания файлов" tabindex="0">
-            Перетащите сюда файлы .txt / .md / .epub / .pdf
-          </div>
+          <div id="emptyLibraryNote" class="muted" style="margin-top:8px">Добавьте JSON-файлы с книгами.</div>
         </div>
 
         <div class="card">
           <div style="display:flex;align-items:center;gap:12px;justify-content:space-between">
-            <div class="title">Предустановленные ссылки</div>
-            <div class="muted">Telegra.ph</div>
+            <div class="title">Оглавление / детали</div>
+            <div class="muted">просмотр без читалки</div>
           </div>
-          <div id="linksList" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:8px; margin-top:8px"></div>
+          <div id="details" class="toc muted">Выберите книгу, чтобы увидеть главы и подразделы.</div>
         </div>
       </div>
     </section>
 
-    <!-- Экран чтения -->
-    <section id="view-reader" class="hidden" aria-labelledby="reader-heading">
-      <h2 id="reader-heading" class="sr-only">Чтение</h2>
-
-      <div class="card" style="padding:0">
-        <!-- Верхняя панель чтения -->
-        <div style="display:flex;align-items:center;gap:8px; padding:10px 12px; border-bottom:1px solid var(--border)">
-          <button class="btn" id="btnReaderBack" title="В библиотеку" aria-label="Назад">←</button>
-          <div style="display:flex;flex-direction:column;gap:2px">
-            <div id="readerTitle" class="title" style="line-height:1.2">—</div>
-            <div id="readerMeta" class="muted" style="font-size:13px">—</div>
-          </div>
-          <div class="spacer"></div>
-          <div class="menu" id="readerMenu">
-            <button class="btn-ghost" aria-haspopup="menu" aria-expanded="false" title="Опции">⋯</button>
-            <div class="menu-list" role="menu" aria-label="Меню чтения">
-              <button class="btn" role="menuitem" id="btnTOC">Оглавление</button>
-              <button class="btn" role="menuitem" id="btnBookmark">Закладка</button>
-              <button class="btn" role="menuitem" id="btnAddNote">Заметка…</button>
-              <button class="btn" role="menuitem" id="btnFind">Поиск…</button>
-              <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
-              <button class="btn" role="menuitem" id="btnReaderSettings">Настройки чтения</button>
-              <button class="btn" role="menuitem" id="btnClearThis">Очистить данные этой книги…</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Контент -->
-        <div id="contentHost" class="reader" role="article" aria-live="polite"></div>
-
-        <!-- Нижняя панель чтения -->
-        <div class="footerbar">
-          <div class="footer-inner">
-            <button class="btn" id="btnPrev" title="Назад">⟨</button>
-            <button class="btn" id="btnNext" title="Вперёд">⟩</button>
-
-            <div class="spacer"></div>
-
-            <div class="pill" style="gap:10px">
-              <span id="progressText" class="muted" style="min-width:120px; text-align:right">0%</span>
-              <div class="progress" style="width:200px"><span id="progressBar" style="width:0%"></span></div>
-            </div>
-
-            <div class="spacer"></div>
-
-            <button class="btn" id="btnZoomOut" title="Масштаб −">−</button>
-            <button class="btn" id="btnZoomIn" title="Масштаб +">+</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Панель оглавления/поиска/закладок -->
-      <div id="sidePanel" class="card hidden" style="margin-top:12px">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
-          <div class="title" id="sidePanelTitle">Оглавление</div>
-          <div class="spacer"></div>
-          <button class="btn-ghost" id="btnClosePanel" title="Закрыть">✕</button>
-        </div>
-        <div id="sidePanelBody" class="toc"></div>
-      </div>
-    </section>
-
-    <!-- Экран настроек -->
     <section id="view-settings" class="hidden" aria-labelledby="settings-heading">
       <h2 id="settings-heading" class="title">Настройки</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px">
         <div class="card">
           <div class="title" style="margin-bottom:8px">Тема</div>
-          <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-            <label><input type="radio" name="theme" value="beige" checked> Бежевая</label>
+          <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+            <label><input type="radio" name="theme" value="auto"> Авто</label>
             <label><input type="radio" name="theme" value="light"> Светлая</label>
             <label><input type="radio" name="theme" value="dark"> Тёмная</label>
-            <label><input type="radio" name="theme" value="sepia"> Сепия</label>
-            <label><input type="radio" name="theme" value="auto"> Следовать Telegram</label>
           </div>
         </div>
-
-        <div class="card">
-          <div class="title" style="margin-bottom:8px">Шрифт и верстка</div>
-          <div class="grid">
-            <label>Размер шрифта: <input type="range" id="fontSizeRange" min="14" max="24" value="18"> <span id="fontSizeVal">18</span>px</label>
-            <label>Межстрочный интервал: <input type="range" id="lineHeightRange" min="130" max="200" value="155"> <span id="lineHeightVal">1.55</span></label>
-            <label>Ширина колонки:
-              <select id="columnWidth">
-                <option value="58ch">Узкая</option>
-                <option value="72ch" selected>Средняя</option>
-                <option value="90ch">Широкая</option>
-              </select>
-            </label>
-            <label>Выравнивание:
-              <select id="textAlign">
-                <option value="start">По левому краю</option>
-                <option value="justify">По ширине</option>
-                <option value="center">По центру</option>
-              </select>
-            </label>
-            <label>Семейство шрифта:
-              <select id="fontFamily">
-                <option value="system-ui">Системный (sans)</option>
-                <option value="serif">Serif</option>
-                <option value="mono">Monospace</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
         <div class="card">
           <div class="title" style="margin-bottom:8px">Данные</div>
           <div class="grid">
-            <button class="btn" id="btnClearCaches">Очистить кеш (все книги)…</button>
-            <button class="btn" id="btnMakeCNAME">Скачать CNAME (для домена)</button>
-            <div class="muted" style="font-size:13px">
-              Разверните на GitHub Pages. Для домена добавьте файл <b>CNAME</b> в корень репозитория со своим доменом.
-            </div>
+            <button class="btn" id="btnClearAll2">Очистить библиотеку…</button>
           </div>
         </div>
       </div>
@@ -315,37 +120,25 @@
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <!-- Диалоги -->
-  <dialog id="dlgAddLink">
+  <dialog id="dlgUrl">
     <form method="dialog" style="min-width:min(92vw,520px)">
-      <h3 class="title">Добавить ссылку</h3>
-      <p class="muted">Вставьте URL статьи (например, telegra.ph).</p>
-      <input id="inputLink" type="url" placeholder="https://telegra.ph/..." required style="width:100%;margin:8px 0 12px">
+      <h3 class="title">Добавить JSON по URL</h3>
+      <p class="muted">Вставьте путь к файлу в репозитории (например, <code>/data/otkrovenie_1.json</code> или полный URL).</p>
+      <input id="urlInput" type="url" placeholder="/otkrovenie_1.json" style="width:100%;margin:8px 0 12px" required>
       <menu style="display:flex; gap:8px; justify-content:flex-end">
         <button value="cancel" class="btn">Отмена</button>
-        <button id="btnLinkSave" value="default" class="btn btn-primary">Добавить</button>
+        <button id="btnUrlSave" value="default" class="btn btn-primary">Добавить</button>
       </menu>
     </form>
   </dialog>
 
-  <dialog id="dlgPrompt">
-    <form method="dialog" style="min-width:min(92vw,520px)">
-      <h3 class="title" id="dlgPromptTitle">Введите текст</h3>
-      <textarea id="dlgPromptText" rows="5" style="width:100%"></textarea>
-      <menu style="display:flex; gap:8px; justify-content:flex-end">
-        <button value="cancel" class="btn">Отмена</button>
-        <button value="default" class="btn btn-primary">Ок</button>
-      </menu>
-    </form>
-  </dialog>
-
-  <!-- Шаблон карточки -->
   <template id="tplCard">
     <div class="card">
       <div class="title"></div>
       <div class="muted" style="margin:.25rem 0 .75rem"></div>
-      <div style="display:flex; gap:8px">
-        <button class="btn btn-primary read">Читать</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn btn-primary show">Показать оглавление</button>
+        <button class="btn open-file">Открыть JSON</button>
         <button class="btn remove">Удалить</button>
       </div>
     </div>
@@ -353,856 +146,253 @@
 
 <script>
 ;(()=>{
-
-  /* --------------------------- УТИЛИТЫ --------------------------- */
-  const $ = (sel, root=document)=>root.querySelector(sel);
-  const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
-  const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+  /* ------------------ УТИЛИТЫ ------------------ */
+  const $ = (s, r=document)=>r.querySelector(s);
+  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
   const uid = ()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
-
-  // Хеш роутер
-  const Router = {
-    go(hash){ location.hash = hash },
-    current(){ return location.hash || "#/library" },
-    parse(){
-      const h = Router.current().replace(/^#\//,'');
-      const [name, ...rest] = h.split('/');
-      return { name, params: rest }
-    }
-  };
-
-  // Тост
   const toastEl = $('#toast');
-  function toast(msg, ms=1800){
-    toastEl.textContent = msg;
-    toastEl.classList.remove('hidden');
-    setTimeout(()=>toastEl.classList.add('hidden'), ms);
-  }
+  function toast(msg, ms=1600){ toastEl.textContent = msg; toastEl.classList.remove('hidden'); setTimeout(()=>toastEl.classList.add('hidden'), ms); }
 
-  // Примитивный IndexedDB (stores: library, progress, notes, cache, settings)
+  /* ---------------- IndexedDB ------------------ */
   const DB = (()=>{
-    const DB_NAME = 'readerDB';
-    const DB_VER = 4; // +1: добавили ownerId миграцию
+    const DB_NAME = 'libraryJSONv1';
+    const DB_VER = 1;
     let dbp;
     function open(){
       if (dbp) return dbp;
-      dbp = new Promise((resolve,reject)=>{
+      dbp = new Promise((res,rej)=>{
         const req = indexedDB.open(DB_NAME, DB_VER);
-        req.onupgradeneeded = (e)=>{
+        req.onupgradeneeded = ()=>{
           const db = req.result;
-          if (!db.objectStoreNames.contains('library'))  db.createObjectStore('library', {keyPath:'id'});
-          if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', {keyPath:['userId','contentId']});
-          if (!db.objectStoreNames.contains('notes'))    db.createObjectStore('notes', {keyPath:['userId','contentId']});
-          if (!db.objectStoreNames.contains('cache'))    db.createObjectStore('cache', {keyPath:'key'});
-          if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', {keyPath:'key'});
+          if (!db.objectStoreNames.contains('library')) db.createObjectStore('library',{keyPath:'id'});
+          if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings',{keyPath:'key'});
         };
-        req.onsuccess = ()=>resolve(req.result);
-        req.onerror = ()=>reject(req.error);
+        req.onsuccess = ()=>res(req.result);
+        req.onerror = ()=>rej(req.error);
       });
       return dbp;
     }
-    async function tx(store, mode='readonly'){
-      const db = await open();
-      return db.transaction(store, mode).objectStore(store);
-    }
-    function reqp(req){ return new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); }) }
+    async function tx(store, mode='readonly'){ const db = await open(); return db.transaction(store, mode).objectStore(store); }
+    function p(req){ return new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); }); }
     return {
-      async put(store, val){ const s = await tx(store,'readwrite'); return reqp(s.put(val)); },
-      async get(store, key){ const s = await tx(store); return reqp(s.get(key)); },
-      async delete(store, key){ const s = await tx(store,'readwrite'); return reqp(s.delete(key)); },
-      async getAll(store){ const s = await tx(store); return reqp(s.getAll()); },
-      async clear(store){ const s = await tx(store,'readwrite'); return reqp(s.clear()); },
-    };
+      async put(store, val){ return p((await tx(store,'readwrite')).put(val)); },
+      async get(store, key){ return p((await tx(store)).get(key)); },
+      async getAll(store){ return p((await tx(store)).getAll()); },
+      async del(store, key){ return p((await tx(store,'readwrite')).delete(key)); },
+      async clear(store){ return p((await tx(store,'readwrite')).clear()); }
+    }
   })();
 
-  // Локальные настройки/хранилище состояния
   const Store = {
-    async saveLibraryItem(item){ await DB.put('library', item); },
-    async removeLibraryItem(id){ await DB.delete('library', id); },
-    async allLibrary(){ return await DB.getAll('library'); },
-    async saveProgress(userId, contentId, data){ await DB.put('progress', {userId, contentId, ...data}); },
-    async getProgress(userId, contentId){ return await DB.get('progress', [userId, contentId]); },
-    async saveNotes(userId, contentId, notes){ await DB.put('notes', {userId, contentId, notes}); },
-    async getNotes(userId, contentId){ return await DB.get('notes', [userId, contentId]); },
-    async setSetting(key, val){ await DB.put('settings', {key, val}); },
-    async getSetting(key){ const r = await DB.get('settings', key); return r?.val },
-    async cachePut(key, value){ await DB.put('cache', {key, value, ts:Date.now()}); },
-    async cacheGet(key){ const r = await DB.get('cache', key); return r?.value },
-    async clearAll(){ await DB.clear('library'); await DB.clear('progress'); await DB.clear('notes'); await DB.clear('cache'); }
+    async saveItem(item){ await DB.put('library', item); },
+    async removeItem(id){ await DB.del('library', id); },
+    async all(){ return await DB.getAll('library'); },
+    async setSetting(key,val){ await DB.put('settings',{key,val}); },
+    async getSetting(key){ const r = await DB.get('settings',key); return r?.val; },
+    async clearAll(){ await DB.clear('library'); }
   };
 
-  /* ---------------------- TELEGRAM АДАПТЕР ----------------------- */
+  /* -------------- TELEGRAM адаптер -------------- */
   const TG = (()=>{
-    let available = false;
-    let user = { id:'local', name:'Гость' };
-    let WebApp = null;
-
+    let available = false; let WebApp = null; let user = { id:'local', name:'Гость' };
     function init(){
-      if (window.Telegram && Telegram.WebApp) {
-        WebApp = Telegram.WebApp;
-        available = true;
-        WebApp.ready();
-        WebApp.expand();
-        const u = WebApp.initDataUnsafe?.user;
-        if (u) user = { id: String(u.id), name: (u.username||[u.first_name,u.last_name].filter(Boolean).join(' ')||'Пользователь') };
-        applyThemeFromTelegram();
-        WebApp.onEvent('themeChanged', applyThemeFromTelegram);
-        WebApp.BackButton.onClick(()=> navigateToLibrary());
-      } else {
-        available = false;
+      if (window.Telegram && Telegram.WebApp){
+        WebApp = Telegram.WebApp; available = true; WebApp.ready(); WebApp.expand();
+        const u = WebApp.initDataUnsafe?.user; if (u) user = { id:String(u.id), name: u.username||[u.first_name,u.last_name].filter(Boolean).join(' ')||'Пользователь' };
+        applyThemeFromTelegram(); WebApp.onEvent('themeChanged', applyThemeFromTelegram);
       }
-      updateMainButton();
     }
-
-    function applyThemeFromTelegram(){
-      const follow = appSettings.theme === 'auto';
-      if (!follow) return;
-      const tgTheme = Telegram.WebApp.colorScheme; // 'light' | 'dark'
-      setTheme(tgTheme==='dark'?'dark':'light');
-    }
-
-    function setTheme(t){
-      document.body.setAttribute('data-theme', t);
-      appSettings.appliedTheme = t;
-    }
-
-    function showBackButton(flag){
-      if (!available) return;
-      if (flag) WebApp.BackButton.show(); else WebApp.BackButton.hide();
-    }
-    function openLink(url){
-      if (available) WebApp.openLink(url, { try_instant_view: true });
-      else window.open(url, '_blank', 'noopener');
-    }
-
-    return {
-      init, available:()=>available, user:()=>user, setTheme, showBackButton, openLink
-    };
+    function applyThemeFromTelegram(){ const cs = Telegram.WebApp.colorScheme; if ($('input[name="theme"][value="auto"]').checked) document.body.setAttribute('data-theme', cs==='dark'?'dark':'light'); }
+    return { init };
   })();
 
-  /* ------------------- НАСТРОЙКИ ПРИЛОЖЕНИЯ ---------------------- */
-  const appSettings = {
-    theme: 'beige', appliedTheme: 'beige',
-    fontSize: 18, lineHeight: 1.55, columnWidth: '72ch', textAlign:'start', fontFamily:'system-ui',
-    language: 'ru'
-  };
-
-  function applyReaderStyles(){
-    const host = $('#contentHost');
-    host.style.setProperty('--reader-max', appSettings.columnWidth);
-    host.style.fontSize = appSettings.fontSize + 'px';
-    host.style.lineHeight = String(appSettings.lineHeight);
-    host.style.textAlign = appSettings.textAlign;
-    if (appSettings.fontFamily === 'serif') host.style.fontFamily = 'Georgia, "Times New Roman", serif';
-    else if (appSettings.fontFamily === 'mono') host.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-    else host.style.fontFamily = 'system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,"Noto Sans",sans-serif';
-  }
-
-  /* ----------------- ПРЕДУСТАНОВЛЕННЫЕ ССЫЛКИ -------------------- */
-  const PRESET_LINKS = [
-    { id: 'teleg-1', type:'link', url:'https://telegra.ph/Poslednij-zakat-na-krayu-tishiny-05-21', title:'Последний закат на краю тишины', source:'telegra.ph' },
-    { id: 'teleg-2', type:'link', url:'https://telegra.ph/Progulka-po-lesu-05-15', title:'Прогулка по лесу', source:'telegra.ph' },
-    { id: 'teleg-3', type:'link', url:'https://telegra.ph/Prostye-radosti-06-01', title:'Простые радости', source:'telegra.ph' },
-  ];
-
-  /* --------------------- СОСТОЯНИЕ СЕССИИ ----------------------- */
-  let currentContent = null;
-  let currentReader = null;
-  let textSearchIndex = null;
-  let pdfScale = 1.15;
-  let touchStartX = 0, touchStartY = 0;
-
-  /* -------------------------- UI HOOKS --------------------------- */
-  const views = { library: $('#view-library'), reader: $('#view-reader'), settings: $('#view-settings') };
-  function showView(name){
-    for (const k in views) views[k].classList.toggle('hidden', k!==name);
-    TG.showBackButton(name === 'reader');
-    updateMainButton();
-  }
-
-  // Меню
+  /* ------------------- СОСТОЯНИЕ ------------------- */
+  const detailsHost = $('#details');
   const mainMenu = $('#mainMenu');
-  mainMenu.querySelector('button').addEventListener('click', ()=>{
-    mainMenu.classList.toggle('open');
-    mainMenu.querySelector('button').setAttribute('aria-expanded', mainMenu.classList.contains('open')?'true':'false');
-  });
-  document.addEventListener('click', (e)=>{ if (!mainMenu.contains(e.target)) mainMenu.classList.remove('open'); });
+  const menuList = mainMenu.querySelector('.menu-list');
+  mainMenu.querySelector('button').addEventListener('click', ()=>{ const open = menuList.style.display!=='none'; menuList.style.display = open?'none':'block'; });
+  document.addEventListener('click', (e)=>{ if (!mainMenu.contains(e.target)) menuList.style.display='none'; });
 
-  $('#btnSettings').addEventListener('click', ()=> Router.go('#/settings'));
-  $('#btnExportNotes').addEventListener('click', exportAllNotes);
-  $('#btnClearAll').addEventListener('click', async ()=>{
-    if (!confirm('Удалить библиотеку/прогресс/заметки/кеш?')) return;
-    await Store.clearAll(); await refreshLibrary(); toast('Очищено');
-  });
+  $('#btnSettings').addEventListener('click', ()=> showView('settings'));
+  $('#btnClearAll').addEventListener('click', clearAll);
+  $('#btnClearAll2').addEventListener('click', clearAll);
 
-  // Домой
-  $('#appLogo').addEventListener('click', ()=> navigateToLibrary());
-  $('#appLogo').addEventListener('keypress', (e)=>{ if(e.key==='Enter') navigateToLibrary(); });
+  $('#fileInput').addEventListener('change', async (e)=>{ await importJSONFiles(Array.from(e.target.files||[])); e.target.value=''; });
+  $('#btnAddUrl').addEventListener('click', openUrlDialog);
+  $('#btnAddUrl2').addEventListener('click', openUrlDialog);
+  $('#btnLoadIndex').addEventListener('click', loadIndexJson);
+  $('#btnLoadIndex2').addEventListener('click', loadIndexJson);
+  $('#appLogo').addEventListener('click', ()=> showView('library'));
+  $('#searchInput').addEventListener('input', refreshLibrary);
 
-  // Поиск
-  $('#searchInput').addEventListener('input', ()=> refreshLibrary());
-
-  // Drag&Drop (в Telegram часто не работает — оставляем как доп. способ)
-  const dropZone = $('#dropZone');
-  $('#btnOpenDrop').addEventListener('click', ()=> dropZone.classList.toggle('hidden'));
-  ;['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{e.preventDefault(); dropZone.classList.add('dragover');}));
-  ;['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{e.preventDefault(); dropZone.classList.remove('dragover');}));
-  dropZone.addEventListener('drop', async (e)=>{ const files = Array.from(e.dataTransfer.files||[]); if (files.length) await importFiles(files); });
-
-  // Открыть файл (и пункт меню — label for)
-  $('#btnOpenFile').addEventListener('click', ()=> {/* label-for делает свое, но пусть будет */});
-  $('#fileInput').addEventListener('change', async (e)=>{ await importFiles(Array.from(e.target.files||[])); e.target.value=''; });
-
-  // Добавление ссылки
-  const dlgAddLink = $('#dlgAddLink'), inputLink = $('#inputLink');
-  $('#btnAddLink').addEventListener('click', ()=>{ inputLink.value=''; dlgAddLink.showModal(); });
-  $('#btnLinkSave').addEventListener('click', async (e)=>{
-    e.preventDefault();
-    const url = inputLink.value.trim(); if (!url) return;
-    const item = { id: 'link-'+uid(), ownerId: TG.user().id, type:'link', url, title:url, source:new URL(url).hostname, created:Date.now() };
-    await Store.saveLibraryItem(item); dlgAddLink.close(); await refreshLibrary(); toast('Ссылка добавлена');
-  });
-
-  // Настройки
-  const themeRadios = $$('input[name="theme"]');
-  themeRadios.forEach(r=>r.addEventListener('change', async ()=>{
-    appSettings.theme = themeRadios.find(x=>x.checked).value;
-    await Store.setSetting('theme', appSettings.theme);
-    if (appSettings.theme==='auto') TG.setTheme(appSettings.appliedTheme);
-    else document.body.setAttribute('data-theme', appSettings.theme);
-  }));
-  const fontSizeRange = $('#fontSizeRange'), lineHeightRange = $('#lineHeightRange');
-  const fontSizeVal = $('#fontSizeVal'), lineHeightVal = $('#lineHeightVal');
-  const columnWidthSel = $('#columnWidth'), textAlignSel = $('#textAlign'), fontFamilySel = $('#fontFamily');
-  function persistReadingPrefs(){
-    Store.setSetting('fontSize', appSettings.fontSize);
-    Store.setSetting('lineHeight', appSettings.lineHeight);
-    Store.setSetting('columnWidth', appSettings.columnWidth);
-    Store.setSetting('textAlign', appSettings.textAlign);
-    Store.setSetting('fontFamily', appSettings.fontFamily);
-    applyReaderStyles(); if (currentReader?.applyTypography) currentReader.applyTypography();
-  }
-  fontSizeRange.addEventListener('input', ()=>{ appSettings.fontSize = +fontSizeRange.value; fontSizeVal.textContent = appSettings.fontSize; persistReadingPrefs(); });
-  lineHeightRange.addEventListener('input', ()=>{ appSettings.lineHeight = (+lineHeightRange.value/100).toFixed(2); lineHeightVal.textContent = appSettings.lineHeight; persistReadingPrefs(); });
-  columnWidthSel.addEventListener('change', ()=>{ appSettings.columnWidth = columnWidthSel.value; persistReadingPrefs(); });
-  textAlignSel.addEventListener('change', ()=>{ appSettings.textAlign = textAlignSel.value; persistReadingPrefs(); });
-  fontFamilySel.addEventListener('change', ()=>{ appSettings.fontFamily = fontFamilySel.value; persistReadingPrefs(); });
-
-  // Кнопки чтения
-  $('#btnReaderBack').addEventListener('click', ()=> navigateToLibrary());
-  $('#btnTOC').addEventListener('click', ()=> openSidePanelTOC());
-  $('#btnBookmark').addEventListener('click', ()=> addBookmark());
-  $('#btnAddNote').addEventListener('click', ()=> addNoteDialog());
-  $('#btnFind').addEventListener('click', ()=> findDialog());
-  $('#btnReaderSettings').addEventListener('click', ()=> Router.go('#/settings'));
-  $('#btnClearThis').addEventListener('click', async ()=>{ if (!currentContent) return; if (!confirm('Удалить кеш/прогресс/заметки этой книги?')) return; await clearThisBook(currentContent.id); toast('Очищено'); });
-
-  $('#btnPrev').addEventListener('click', ()=> currentReader?.prev && currentReader.prev());
-  $('#btnNext').addEventListener('click', ()=> currentReader?.next && currentReader.next());
-  $('#btnZoomIn').addEventListener('click', ()=> currentReader?.zoom && currentReader.zoom(1));
-  $('#btnZoomOut').addEventListener('click', ()=> currentReader?.zoom && currentReader.zoom(-1));
-  $('#btnClosePanel').addEventListener('click', ()=> $('#sidePanel').classList.add('hidden'));
-
-  /* -------------------- PWA: manifest + SW -------------------- */
-  (function makeManifest(){
-    const manifest = {
-      name: "КЛАДОВАЯ • Читалка",
-      short_name: "Читалка",
-      start_url: ".",
-      display: "standalone",
-      background_color: "#EFE1CE",
-      theme_color: "#B88B5A",
-      icons: [
-        { src: "data:image/svg+xml;utf8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#F7EEDF"/><stop offset="1" stop-color="#EFE1CE"/></linearGradient></defs><rect width="96" height="96" rx="18" fill="url(#g)"/><path d="M18 28a8 8 0 0 1 8-8h44a8 8 0 0 1 8 8v40a8 8 0 0 1-8 8H36l-18 10V28z" fill="#B88B5A"/></svg>'), sizes:"96x96", type:"image/svg+xml" }
-      ]
-    };
-    const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-    const link = document.createElement('link');
-    link.rel = 'manifest';
-    link.href = URL.createObjectURL(blob);
-    document.head.appendChild(link);
-  })();
-
-  (function registerSW(){
-    if (!('serviceWorker' in navigator)) return;
-    const swCode = `
-      const CACHE = 'reader-shell-v5';
-      const APP_SHELL = ['/', location.pathname, location.href];
-      self.addEventListener('install', (e)=> {
-        e.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
-      });
-      self.addEventListener('activate', (e)=> {
-        e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))) .then(()=>self.clients.claim()));
-      });
-      self.addEventListener('fetch', (e)=>{
-        const req = e.request;
-        const url = new URL(req.url);
-        if (req.method!=='GET') return;
-        if (url.origin === location.origin) {
-          e.respondWith(caches.match(req).then(r=> r || fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE).then(c=>c.put(req, copy)); return res; })));
-        } else {
-          e.respondWith(caches.match(req).then(r=> r || fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE).then(c=>c.put(req, copy)); return res; }).catch(()=>r)));
-        }
-      });
-    `;
-    const blob = new Blob([swCode], {type:'text/javascript'});
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl).catch(()=>{});
-  })();
-
-  // CNAME
-  $('#btnMakeCNAME').addEventListener('click', ()=>{
-    const domain = prompt('Введите ваш домен (например, books.example.ru):','example.com');
-    if (!domain) return;
-    const blob = new Blob([domain.trim()], {type:'text/plain'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'CNAME'; a.click();
-  });
-
-  /* ------------------------- РЕНДЕРЫ ----------------------------- */
-  async function updateProgress(pctText='0%', pct=0){
-    $('#progressText').textContent = pctText;
-    $('#progressBar').style.width = pct + '%';
-  }
-  function makeBaseReader(){
-    return {
-      destroy(){}, applyTypography(){}, next(){}, prev(){}, zoom(){},
-      getLocation(){ return { pct:0, label:'', raw:null } }, gotoLocation(loc){},
-      async saveProgress(){
-        if (!currentContent) return;
-        const { pct, label, raw } = this.getLocation();
-        await Store.saveProgress(TG.user().id, currentContent.id, { pct, label, raw, ts:Date.now() });
-        updateProgress(`${Math.round(pct)}% ${label||''}`, pct);
-      }
-    };
+  function showView(name){
+    $('#view-library').classList.toggle('hidden', name!=='library');
+    $('#view-settings').classList.toggle('hidden', name!=='settings');
   }
 
-  /* -------- TXT/MD -------- */
-  function TextReader(text, isMarkdown){
-    const base = makeBaseReader();
-    const host = $('#contentHost');
-    let pos = 0, paragraphs = [];
-    const chunkSize = 4000;
+  async function clearAll(){ if(!confirm('Удалить всю библиотеку?')) return; await Store.clearAll(); detailsHost.innerHTML = '<span class="muted">Библиотека пуста.</span>'; await refreshLibrary(); toast('Очищено'); }
 
-    if (isMarkdown) {
-      const html = DOMPurify.sanitize(marked.parse(text, {mangle:false, headerIds:true}));
-      host.innerHTML = `<article class="md-body">${html}</article>`;
-      paragraphs = Array.from(host.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
-    } else {
-      const parts = text.split(/\n{2,}/).map(p=>`<p>${escapeHtml(p).replace(/\n/g,'<br>')}</p>`).join('\n');
-      host.innerHTML = `<article>${parts}</article>`;
-      paragraphs = $$('#contentHost p');
-    }
-    applyReaderStyles();
-    textSearchIndex = text.toLowerCase();
-
-    function total(){ return text.length||1 }
-    function pct(){ return Math.min(100, Math.max(0, Math.round((pos/total())*100))) }
-    function setPos(newPos){ pos = clamp(newPos,0,total()); scrollToChar(pos); base.saveProgress(); }
-    function scrollToChar(ch){
-      let acc = 0;
-      for (const el of paragraphs){
-        const len = el.textContent.length + 2;
-        if (acc + len > ch){ el.scrollIntoView({behavior:'smooth', block:'start'}); break; }
-        acc += len;
-      }
-    }
-    function keyNav(e){ if (e.key==='ArrowRight' || e.key==='PageDown') base.next(); if (e.key==='ArrowLeft'||e.key==='PageUp') base.prev(); }
-    document.addEventListener('keydown', keyNav);
-
-    attachSwipe(host, ()=>base.next(), ()=>base.prev());
-
-    return Object.assign(base, {
-      destroy(){ document.removeEventListener('keydown', keyNav); },
-      next(){ setPos(pos + chunkSize); },
-      prev(){ setPos(pos - chunkSize); },
-      zoom(){},
-      getLocation(){ return { pct:pct(), label:'', raw:pos } },
-      gotoLocation(loc){ if (typeof loc==='number') setPos(loc); },
-    });
-  }
-
-  /* -------- EPUB -------- */
-  function EPUBReader(arrayBuffer){
-    const base = makeBaseReader();
-    const host = $('#contentHost'); host.innerHTML = '';
-    const book = ePub(arrayBuffer);
-    const rendition = book.renderTo(host, { width:'100%', height:'calc(100dvh - 210px)' });
-    rendition.themes.register('light', { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)', 'line-height': appSettings.lineHeight, 'text-align': appSettings.textAlign, 'font-size': appSettings.fontSize+'px' }});
-    rendition.themes.register('dark',  { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)'}});
-    rendition.themes.register('sepia', { 'body': { 'background': 'var(--bg)', 'color': 'var(--text)'}});
-    rendition.themes.select('light');
-
-    applyReaderStyles();
-    book.ready.then(()=> book.locations.generate(800));
-    rendition.display();
-
-    rendition.on('relocated', async (loc)=>{
-      const pct = Math.round(book.locations.percentageFromCfi(loc.start.cfi)*100) || 0;
-      updateProgress(pct+'%', pct);
-      await base.saveProgress();
-    });
-
-    function next(){ rendition.next(); }
-    function prev(){ rendition.prev(); }
-    function zoom(delta){
-      const fs = clamp(appSettings.fontSize + (delta>0?1:-1), 14, 28);
-      appSettings.fontSize = fs; $('#fontSizeRange').value = fs; $('#fontSizeVal').textContent = fs;
-      rendition.themes.fontSize(fs+'px'); base.saveProgress();
-    }
-    async function search(q){ if (!q) return []; try { return await book.search(q)||[]; } catch { return []; } }
-
-    attachSwipe(host, next, prev);
-
-    return Object.assign(base, {
-      applyTypography(){ rendition.themes.fontSize(appSettings.fontSize+'px'); },
-      next, prev, zoom, search,
-      getLocation(){
-        const loc = rendition.currentLocation();
-        const cfi = loc?.start?.cfi || null;
-        const pct = cfi ? Math.round((book.locations.percentageFromCfi(cfi)||0)*100) : 0;
-        return { pct, label: loc?.start?.displayed?.page || '', raw: cfi };
-      },
-      gotoLocation(cfi){ if (cfi) rendition.display(cfi); },
-      buildTOC: async ()=>{
-        await book.ready;
-        const nav = await book.loaded.navigation;
-        return nav.toc || [];
-      }
-    });
-  }
-
-  /* -------- PDF -------- */
-  function PDFReader(arrayBuffer){
-    const base = makeBaseReader();
-    const host = $('#contentHost'); host.innerHTML = '';
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d',{alpha:false});
-    host.appendChild(canvas);
-
-    let pdfDoc = null, pageNum = 1, pageText = {};
-    pdfScale = 1.15;
-
-    pdfjsLib.getDocument({data: arrayBuffer}).promise.then(async (doc)=>{
-      pdfDoc = doc;
-      await renderPage();
-      buildTextIndex();
-    });
-
-    async function renderPage(){
-      if (!pdfDoc) return;
-      const page = await pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: pdfScale });
-      canvas.width = viewport.width; canvas.height = viewport.height;
-      await page.render({canvasContext:ctx, viewport}).promise;
-      const pct = Math.round((pageNum-1)/(pdfDoc.numPages-1||1)*100);
-      updateProgress(`${pct}% стр. ${pageNum}/${pdfDoc.numPages}`, pct);
-      await base.saveProgress();
-    }
-    async function buildTextIndex(){
-      if (!pdfDoc) return;
-      const lower = [];
-      for (let i=1;i<=pdfDoc.numPages;i++){
-        const page = await pdfDoc.getPage(i);
-        const txt = await page.getTextContent();
-        const s = txt.items.map(it=>it.str).join(' ');
-        pageText[i] = s;
-        lower.push(s.toLowerCase());
-      }
-      textSearchIndex = lower.join('\n');
-    }
-
-    function next(){ if (!pdfDoc) return; if (pageNum<pdfDoc.numPages){ pageNum++; renderPage(); } }
-    function prev(){ if (!pdfDoc) return; if (pageNum>1){ pageNum--; renderPage(); } }
-    function zoom(delta){ pdfScale = clamp(pdfScale + (delta>0?0.1:-0.1), .7, 2.2); renderPage(); }
-
-    document.addEventListener('keydown', onKey);
-    function onKey(e){ if (e.key==='ArrowRight' || e.key==='PageDown') next(); if (e.key==='ArrowLeft'||e.key==='PageUp') prev(); }
-
-    attachSwipe(host, next, prev);
-
-    return Object.assign(base,{
-      destroy(){ document.removeEventListener('keydown', onKey); },
-      next, prev, zoom,
-      getLocation(){ const pct = Math.round((pageNum-1)/(pdfDoc?.numPages-1||1)*100)||0; return { pct, label:`стр. ${pageNum}/${pdfDoc?.numPages||'?'}`, raw: pageNum }; },
-      gotoLocation(p){ if (p) { pageNum = clamp(p,1,pdfDoc?.numPages||1); renderPage(); } },
-      buildTOCPages: async ()=> Array.from({length: pdfDoc?.numPages||0}, (_,i)=>({ label:'Стр. '+(i+1), page:i+1 }))
-    });
-  }
-
-  /* -------- ВНЕШНЯЯ ССЫЛКА (Telegra.ph) -------- */
-  async function fetchExternalArticle(url){
-    const key = 'ext:'+url;
-    const cached = await Store.cacheGet(key);
-    if (cached) return cached;
-    try {
-      const res = await fetch(url, {mode:'cors'});
-      const html = await res.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const title = doc.querySelector('meta[property="og:title"]')?.content || doc.querySelector('title')?.textContent || url;
-      const author = doc.querySelector('meta[name="author"]')?.content || doc.querySelector('.author')?.textContent || '';
-      const article = doc.querySelector('article') || doc.querySelector('*[data-article]') || doc.body;
-      const clean = DOMPurify.sanitize(article?.innerHTML || '');
-      const data = { title, author, content: clean, url };
-      await Store.cachePut(key, data);
-      return data;
-    } catch { return null; }
-  }
-  function ExternalReader(articleHTML){
-    const base = makeBaseReader();
-    const host = $('#contentHost');
-    host.innerHTML = `<article class="reader-article">${articleHTML}</article>`;
-    applyReaderStyles();
-    textSearchIndex = host.textContent.toLowerCase();
-
-    let scrollT = 0;
-    function getPct(){
-      const el = document.documentElement;
-      const h = el.scrollHeight - el.clientHeight; if (h<=0) return 0; return Math.round((window.scrollY/h)*100);
-    }
-    window.addEventListener('scroll', onScroll, {passive:true});
-    function onScroll(){ scrollT = window.scrollY; base.saveProgress(); }
-
-    attachSwipe(host, ()=> window.scrollBy({top: window.innerHeight*0.9, behavior:'smooth'}), ()=> window.scrollBy({top: -window.innerHeight*0.9, behavior:'smooth'}));
-
-    return Object.assign(base,{
-      destroy(){ window.removeEventListener('scroll', onScroll);},
-      next(){ window.scrollBy({top: window.innerHeight*0.9, behavior:'smooth'}); },
-      prev(){ window.scrollBy({top: -window.innerHeight*0.9, behavior:'smooth'}); },
-      zoom(delta){
-        const fs = clamp(appSettings.fontSize + (delta>0?1:-1), 14, 28);
-        appSettings.fontSize = fs; $('#fontSizeRange').value = fs; $('#fontSizeVal').textContent = fs; applyReaderStyles(); base.saveProgress();
-      },
-      getLocation(){ return { pct:getPct(), label:'', raw:scrollT } },
-      gotoLocation(y){ if (typeof y==='number') window.scrollTo({top:y, behavior:'instant'}); }
-    });
-  }
-
-  /* ------------------------ БИБЛИОТЕКА --------------------------- */
-  async function importFiles(files){
+  /* ------------------- ИМПОРТ ------------------- */
+  async function importJSONFiles(files){
+    let ok = 0, bad = 0;
     for (const file of files){
-      const ext = (file.name.split('.').pop()||'').toLowerCase();
-      const id = 'file-'+uid();
-      const baseItem = { id, ownerId: TG.user().id, type:'file', name:file.name, size:file.size, created:Date.now(), source:'Локальный файл' };
-      let item = {...baseItem};
-
-      if (['txt','md','markdown'].includes(ext)){
-        const text = await readFileTextStreaming(file);
-        item.format = ext==='txt'?'txt':'md';
-        item.title = file.name.replace(/\.[^.]+$/,'');
-        item.buffer = text;
-      } else if (ext==='epub'){
-        const buf = await file.arrayBuffer();
-        item.format = 'epub'; item.title = file.name.replace(/\.epub$/i,''); item.buffer = buf;
-      } else if (ext==='pdf'){
-        const buf = await file.arrayBuffer();
-        item.format = 'pdf'; item.title = file.name.replace(/\.pdf$/i,''); item.buffer = buf;
-      } else {
-        toast('Неподдерживаемый формат: '+ext); continue;
-      }
-      await Store.saveLibraryItem(item);
+      try{
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const item = normalizeJSONItem(data, { id: 'json-'+uid(), source:'Локальный файл', path:file.name });
+        await Store.saveItem(item); ok++;
+      }catch{ bad++; }
     }
     await refreshLibrary();
-    toast('Файлы добавлены');
+    toast(`Импортировано: ${ok}${bad?`, ошибок: ${bad}`:''}`);
   }
 
-  async function readFileTextStreaming(file){
-    if (file.stream && TextDecoder && window.TextDecoderStream){
-      const decoder = new TextDecoderStream('utf-8');
-      const reader = file.stream().pipeThrough(decoder).getReader();
-      let out = '';
-      while (true){
-        const {value, done} = await reader.read();
-        if (done) break;
-        out += value;
-      }
-      return out;
-    } else { return await file.text(); }
+  function normalizeJSONItem(json, meta={}){
+    const title = json.title || json.book_title || 'Без названия';
+    const chapters = Array.isArray(json.chapters)? json.chapters.length : 0;
+    return {
+      id: meta.id || json.content_id || 'json-'+uid(),
+      type: 'json-book',
+      title,
+      content_id: json.content_id||null,
+      chapters,
+      pages: json.pages||null,
+      source: meta.source||'JSON',
+      path: meta.path||null,
+      created: Date.now(),
+      json
+    };
   }
 
-  function renderCard(item, listEl){
-    const node = document.importNode($('#tplCard').content, true);
-    const el = node.firstElementChild;
-    const t = el.querySelector('.title');
-    const m = el.querySelector('.muted');
-    const btnRead = el.querySelector('.read');
-    const btnRemove = el.querySelector('.remove');
-
-    t.textContent = item.title || item.name || item.url;
-    m.textContent = (item.source || item.format || item.url) + (item.ownerId && item.ownerId!=='local' ? ' • 👤' : '');
-
-    btnRead.addEventListener('click', ()=> openItem(item));
-    btnRemove.addEventListener('click', async ()=>{
-      if (!confirm('Удалить из локальной библиотеки?')) return;
-      await Store.removeLibraryItem(item.id); await refreshLibrary();
+  async function openUrlDialog(){
+    const dlg = $('#dlgUrl'); const input = $('#urlInput'); input.value = '';
+    dlg.showModal();
+    dlg.addEventListener('close', async function onClose(){
+      dlg.removeEventListener('close', onClose);
+      if (dlg.returnValue !== 'default') return;
+      const url = input.value.trim(); if (!url) return;
+      try{
+        const res = await fetch(url, {cache:'no-store'});
+        const data = await res.json();
+        const item = normalizeJSONItem(data, { id:'json-'+uid(), source:'URL', path:url });
+        await Store.saveItem(item); await refreshLibrary(); toast('Добавлено');
+      }catch(err){ console.error(err); toast('Не удалось загрузить JSON'); }
     });
-    listEl.appendChild(el);
   }
 
+  async function loadIndexJson(){
+    // Ожидаемый формат library.json: [{ title, url }, ...]
+    const url = prompt('Путь к library.json (например, /library.json):','/library.json'); if (!url) return;
+    try{
+      const res = await fetch(url, {cache:'no-store'}); const list = await res.json();
+      let added = 0;
+      for (const row of list){
+        try{
+          const r = await fetch(row.url, {cache:'no-store'}); const data = await r.json();
+          const item = normalizeJSONItem(data, { id:'json-'+uid(), source:'index', path:row.url });
+          await Store.saveItem(item); added++;
+        }catch{ /* пропускаем */ }
+      }
+      await refreshLibrary(); toast(`Импортировано из index: ${added}`);
+    }catch{ toast('Не удалось загрузить library.json'); }
+  }
+
+  /* ------------------- РЕНДЕР ------------------- */
   async function refreshLibrary(){
-    const q = $('#searchInput').value.toLowerCase().trim();
-    const list = await Store.allLibrary();
-
-    // Лениво проставим ownerId старым записям
-    for (const it of list){
-      if (!it.ownerId){ it.ownerId = 'local'; await Store.saveLibraryItem(it); }
-    }
-
-    const mine = list.filter(x=> (x.ownerId||'local') === TG.user().id || (TG.user().id==='local' && (x.ownerId==='local'||!x.ownerId)));
-
-    const byRecent = [...mine].sort((a,b)=> (b.lastOpened||0)-(a.lastOpened||0));
-    const rec = $('#recentList'); rec.innerHTML='';
-    byRecent.slice(0,5).forEach(it=> renderCard(it, rec));
-
-    const lib = $('#libraryList'); lib.innerHTML='';
-    const filtered = mine.filter(it=>{
-      const s = (it.title||it.name||it.url||'').toLowerCase();
-      return !q || s.includes(q);
-    }).sort((a,b)=> (b.created||0)-(a.created||0));
-    filtered.forEach(it=> renderCard(it, lib));
+    const q = ($('#searchInput').value||'').toLowerCase().trim();
+    const list = await Store.all();
+    const lib = $('#libraryList'); lib.innerHTML = '';
+    const filtered = list.filter(it=> !q || (it.title||'').toLowerCase().includes(q) || (it.path||'').toLowerCase().includes(q));
+    filtered.sort((a,b)=> (b.created||0)-(a.created||0));
     $('#emptyLibraryNote').classList.toggle('hidden', !!filtered.length);
-
-    // Предустановки — показываем всегда (при открытии добавим ownerId)
-    const linksHost = $('#linksList'); linksHost.innerHTML='';
-    PRESET_LINKS.forEach(link=>{
-      const card = document.importNode($('#tplCard').content, true).firstElementChild;
-      card.querySelector('.title').textContent = link.title;
-      card.querySelector('.muted').textContent = link.source;
-      card.querySelector('.read').textContent = 'Открыть';
-      card.querySelector('.read').addEventListener('click', async ()=>{
-        const copy = { ...link, ownerId: TG.user().id, created:Date.now() };
-        await Store.saveLibraryItem(copy);
-        openItem(copy);
-      });
-      card.querySelector('.remove').textContent = 'В библиотеку';
-      card.querySelector('.remove').addEventListener('click', async ()=>{
-        const copy = { ...link, ownerId: TG.user().id, created:Date.now() };
-        await Store.saveLibraryItem(copy); toast('Добавлено в библиотеку'); await refreshLibrary();
-      });
-      linksHost.appendChild(card);
-    });
+    for (const it of filtered){ renderCard(it, lib); }
   }
 
-  async function openItem(item){
-    currentContent = item;
-    item.lastOpened = Date.now();
-    await Store.saveLibraryItem(item);
+  function renderCard(item, host){
+    const frag = document.importNode($('#tplCard').content, true);
+    const el = frag.firstElementChild;
+    el.querySelector('.title').textContent = item.title;
+    el.querySelector('.muted').textContent = `${item.source||'JSON'}${item.pages?` • стр. ${item.pages}`:''}${item.chapters?` • глав: ${item.chapters}`:''}`;
+    el.querySelector('.show').addEventListener('click', ()=> showDetails(item));
+    el.querySelector('.open-file').addEventListener('click', ()=> openJSON(item));
+    el.querySelector('.remove').addEventListener('click', async ()=>{ if(!confirm('Удалить из библиотеки?')) return; await Store.removeItem(item.id); await refreshLibrary(); if (detailsHost.dataset.id===item.id) detailsHost.innerHTML='<span class="muted">Книга удалена.</span>'; });
+    host.appendChild(el);
+  }
 
-    $('#readerTitle').textContent = item.title || item.name || item.url;
-    $('#readerMeta').textContent  = item.source || (item.type==='link' ? 'Ссылка' : (item.format||''));
-    $('#sidePanel').classList.add('hidden');
-
-    showView('reader');
-    Router.go('#/read/'+item.id);
-
-    if (item.type==='file'){
-      if (item.format==='txt'){ currentReader = TextReader(item.buffer, false); }
-      else if (item.format==='md'){ currentReader = TextReader(item.buffer, true); buildTOCFromHeadings(); }
-      else if (item.format==='epub'){ currentReader = EPUBReader(item.buffer); setTimeout(buildTOC_EPUB, 400); }
-      else if (item.format==='pdf'){ currentReader = PDFReader(item.buffer); setTimeout(buildTOC_PDF, 400); }
-    } else if (item.type==='link'){
-      const art = await fetchExternalArticle(item.url);
-      if (art){
-        currentReader = ExternalReader(`<h1>${escapeHtml(art.title)}</h1>${art.author?`<div class="muted" style="margin-bottom:1rem">${escapeHtml(art.author)}</div>`:''}${art.content}`);
-        buildTOCFromHeadings();
-      } else {
-        TG.openLink(item.url);
-        toast('Открыли внешним способом (CORS). Прогресс внутри сайта не отслеживается.');
-        return;
+  function showDetails(item){
+    detailsHost.dataset.id = item.id;
+    const j = item.json || {};
+    const meta = `
+      <div class="muted" style="margin-bottom:8px">content_id: <b>${j.content_id||'—'}</b> • pages: <b>${j.pages||'—'}</b> • chapters: <b>${(j.chapters||[]).length}</b></div>
+    `;
+    const chapters = Array.isArray(j.chapters) ? j.chapters : [];
+    if (!chapters.length){ detailsHost.innerHTML = meta + '<div class="muted">Глав нет (или неверный формат JSON).</div>'; return; }
+    const ul = document.createElement('ul'); ul.style.listStyle='none'; ul.style.padding='0';
+    chapters.forEach((ch, i)=>{
+      const li = document.createElement('li'); li.style.margin='8px 0';
+      const h = document.createElement('div'); h.innerHTML = `<b>${escapeHtml(ch.title||`Глава ${i+1}`)}</b> <span class="muted">(стр. ${ch.start_page||'—'})</span>`;
+      li.appendChild(h);
+      const subs = Array.isArray(ch.subsections)? ch.subsections: [];
+      if (subs.length){
+        const ul2 = document.createElement('ul'); ul2.style.margin='6px 0 0 14px';
+        subs.forEach(ss=>{
+          const li2 = document.createElement('li');
+          li2.innerHTML = `${escapeHtml(ss.title||'Подзаголовок')} <span class="muted">(стр. ${ss.start_page||'—'})</span>`;
+          ul2.appendChild(li2);
+        });
+        li.appendChild(ul2);
       }
-    }
-
-    const pr = await Store.getProgress(TG.user().id, item.id);
-    if (pr?.raw!=null) setTimeout(()=> currentReader?.gotoLocation(pr.raw), 200);
-
-    updateMainButton();
-  }
-
-  async function clearThisBook(contentId){
-    await Store.saveProgress(TG.user().id, contentId, { pct:0, label:'', raw:null, ts:Date.now() });
-    await Store.saveNotes(TG.user().id, contentId, []);
-    toast('Данные очищены');
-  }
-
-  function navigateToLibrary(){ Router.go('#/library'); showView('library'); }
-
-  /* -------------------- ОГЛАВЛЕНИЕ / ПОИСК ---------------------- */
-  function openSidePanelTOC(){
-    const body = $('#sidePanelBody'); body.innerHTML='';
-    $('#sidePanelTitle').textContent = 'Оглавление';
-
-    if (currentContent?.format==='pdf' && currentReader?.buildTOCPages){
-      currentReader.buildTOCPages().then(pages=>{
-        pages.forEach(p=>{
-          const a = document.createElement('button'); a.className='btn-ghost'; a.textContent = p.label;
-          a.addEventListener('click', ()=> currentReader.gotoLocation(p.page));
-          body.appendChild(a);
-        });
-      });
-    } else if (currentContent?.format==='epub' && currentReader?.buildTOC){
-      currentReader.buildTOC().then(toc=>{
-        toc.forEach(item=>{
-          const a = document.createElement('button'); a.className='btn-ghost'; a.textContent = item.label||item.id;
-          a.addEventListener('click', ()=> currentReader.gotoLocation(item.href));
-          body.appendChild(a);
-        });
-      });
-    } else {
-      buildTOCFromHeadings();
-    }
-    $('#sidePanel').classList.remove('hidden');
-  }
-
-  function buildTOCFromHeadings(){
-    const body = $('#sidePanelBody'); body.innerHTML='';
-    $('#sidePanelTitle').textContent = 'Оглавление';
-    const heads = $$('#contentHost h1, #contentHost h2, #contentHost h3, #contentHost h4');
-    if (!heads.length){ body.textContent='Оглавление не найдено'; $('#sidePanel').classList.remove('hidden'); return; }
-    heads.forEach(h=>{
-      const btn = document.createElement('button'); btn.className='btn-ghost';
-      btn.textContent = (h.tagName + ' • ' + h.textContent).replace(/H(\d)/,'§$1');
-      btn.addEventListener('click', ()=> h.scrollIntoView({behavior:'smooth', block:'start'}));
-      body.appendChild(btn);
+      ul.appendChild(li);
     });
-    $('#sidePanel').classList.remove('hidden');
-  }
-  function buildTOC_EPUB(){ openSidePanelTOC(); $('#sidePanel').classList.add('hidden'); }
-  function buildTOC_PDF(){ openSidePanelTOC(); $('#sidePanel').classList.add('hidden'); }
-
-  async function findDialog(){
-    const dlg = $('#dlgPrompt'); $('#dlgPromptTitle').textContent='Поиск по тексту'; $('#dlgPromptText').value='';
-    dlg.showModal();
-    const ok = await waitDialog(dlg); if (!ok) return;
-    const q = $('#dlgPromptText').value.trim().toLowerCase(); if (!q){ toast('Пустой запрос'); return; }
-
-    if (currentContent?.format==='epub' && currentReader?.search){
-      const res = await currentReader.search(q);
-      const body = $('#sidePanelBody'); body.innerHTML='';
-      $('#sidePanelTitle').textContent = 'Результаты поиска';
-      (res||[]).slice(0,100).forEach(hit=>{
-        const b = document.createElement('button'); b.className='btn-ghost';
-        b.textContent = hit.excerpt?.replace(/\s+/g,' ').slice(0,120) || hit.cfi;
-        b.addEventListener('click', ()=> currentReader.gotoLocation(hit.cfi||hit.href));
-        body.appendChild(b);
-      });
-      $('#sidePanel').classList.remove('hidden');
-      toast((res?.length||0)+' результатов');
-      return;
-    }
-
-    if (textSearchIndex){
-      const idx = textSearchIndex.indexOf(q);
-      if (idx>=0){ toast('Найдено — перемещаю'); currentReader?.gotoLocation(idx); }
-      else toast('Не найдено');
-    } else toast('Поиск для этого формата пока недоступен');
+    detailsHost.innerHTML = meta; detailsHost.appendChild(ul);
   }
 
-  function waitDialog(dlg){
-    return new Promise(res=>{
-      function onClose(){ dlg.removeEventListener('close', onClose); res(dlg.returnValue==='default'); }
-      dlg.addEventListener('close', onClose);
-    });
+  function openJSON(item){
+    const blob = new Blob([JSON.stringify(item.json, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = (item.title||'book')+'.json'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
   }
 
-  /* -------------------- ЗАКЛАДКИ / ЗАМЕТКИ ---------------------- */
-  async function addBookmark(){
-    if (!currentReader || !currentContent) return;
-    await currentReader.saveProgress();
-    toast('Закладка сохранена');
-  }
+  function escapeHtml(s=''){ return s.replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
 
-  async function addNoteDialog(){
-    if (!currentReader || !currentContent) return;
-    const sel = window.getSelection(); const selected = sel?.toString()?.trim();
-    const dlg = $('#dlgPrompt'); $('#dlgPromptTitle').textContent='Заметка'; $('#dlgPromptText').value = selected ? (`Цитата: "${selected}"\n\nЗаметка:`) : '';
-    dlg.showModal();
-    const ok = await waitDialog(dlg); if (!ok) return;
-    const text = $('#dlgPromptText').value.trim(); if (!text) return;
+  /* ----------- PWA (минимальная обёртка) ----------- */
+  (function makeManifest(){
+    const manifest = { name:"КЛАДОВАЯ • Библиотека", short_name:"Библиотека", start_url:".", display:"standalone", background_color:"#EFE1CE", theme_color:"#B88B5A" };
+    const blob = new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
+    const link = document.createElement('link'); link.rel='manifest'; link.href = URL.createObjectURL(blob); document.head.appendChild(link);
+  })();
 
-    const pr = await Store.getProgress(TG.user().id, currentContent.id) || {};
-    const list = (await Store.getNotes(TG.user().id, currentContent.id))?.notes || [];
-    list.push({ id: uid(), ts:Date.now(), at: pr.raw??null, pct: pr.pct??0, quote: selected||'', text });
-    await Store.saveNotes(TG.user().id, currentContent.id, list);
-    toast('Заметка добавлена');
-  }
-
-  async function exportAllNotes(){
-    // простой экспорт по всем книгам текущего пользователя
-    const all = await DB.getAll('notes');
-    const my = (all||[]).filter(n => n.userId === TG.user().id);
-    const txt = my.map(n=>`Книга: ${n.contentId}\n`+(n.notes||[]).map(m=>`— (${m.pct||0}%) ${m.quote?`"${m.quote}" `:''}${m.text}`).join('\n')).join('\n\n');
-    const blob = new Blob([txt || 'Нет заметок'], {type:'text/plain;charset=utf-8'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'notes.txt'; a.click();
-  }
-
-  /* ---------------------- MAIN BUTTON ---------------------- */
-  function updateMainButton(){
-    if (!(window.Telegram && Telegram.WebApp)) return;
-    const route = Router.parse().name;
-    if (route==='library'){
-      Telegram.WebApp.MainButton.setParams({text:'Открыть файл', is_visible:true});
-      Telegram.WebApp.MainButton.onClick(()=> $('#fileInput').click());
-    } else if (route==='read'){
-      Telegram.WebApp.MainButton.setParams({text:'Оглавление', is_visible:true});
-      Telegram.WebApp.MainButton.onClick(()=> openSidePanelTOC());
-    } else if (route==='settings'){
-      Telegram.WebApp.MainButton.setParams({text:'Продолжить чтение', is_visible: !!currentContent});
-      Telegram.WebApp.MainButton.onClick(()=> { if(currentContent) Router.go('#/read/'+currentContent.id); });
-    }
-  }
-
-  /* --------------------------- РОУТИНГ --------------------------- */
-  window.addEventListener('hashchange', onRoute);
-  async function onRoute(){
-    const r = Router.parse();
-    if (r.name==='library'){ showView('library'); }
-    else if (r.name==='settings'){ showView('settings'); }
-    else if (r.name==='read' && r.params[0]){
-      const id = r.params[0];
-      const all = await Store.allLibrary();
-      const item = all.find(x=>x.id===id) || PRESET_LINKS.find(x=>x.id===id);
-      if (item) openItem(item); else { toast('Материал не найден'); navigateToLibrary(); }
-    } else { navigateToLibrary(); }
-  }
-
-  /* --------------------- ИНИЦИАЛИЗАЦИЯ ----------------------- */
-  async function loadSettings(){
-    appSettings.theme = await Store.getSetting('theme') ?? 'beige';
-    appSettings.fontSize = await Store.getSetting('fontSize') ?? 18;
-    appSettings.lineHeight = await Store.getSetting('lineHeight') ?? 1.55;
-    appSettings.columnWidth = await Store.getSetting('columnWidth') ?? '72ch';
-    appSettings.textAlign = await Store.getSetting('textAlign') ?? 'start';
-    appSettings.fontFamily = await Store.getSetting('fontFamily') ?? 'system-ui';
-
-    $$('input[name="theme"]').forEach(r=> r.checked = (r.value===appSettings.theme));
-    $('#fontSizeRange').value = appSettings.fontSize; $('#fontSizeVal').textContent = appSettings.fontSize;
-    const lh = Math.round(appSettings.lineHeight*100); $('#lineHeightRange').value = lh; $('#lineHeightVal').textContent = appSettings.lineHeight;
-    $('#columnWidth').value = appSettings.columnWidth; $('#textAlign').value = appSettings.textAlign; $('#fontFamily').value = appSettings.fontFamily;
-
-    if (appSettings.theme==='auto') TG.setTheme(appSettings.appliedTheme);
-    else document.body.setAttribute('data-theme', appSettings.theme);
-
-    applyReaderStyles();
-  }
-
-  function attachSwipe(el, onLeft, onRight){
-    el.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; touchStartX=t.clientX; touchStartY=t.clientY; }, {passive:true});
-    el.addEventListener('touchend', (e)=>{
-      const t=e.changedTouches[0]; const dx=t.clientX-touchStartX; const dy=t.clientY-touchStartY;
-      if (Math.abs(dx)>60 && Math.abs(dy)<40){ if (dx<0) onLeft?.(); else onRight?.(); }
-    }, {passive:true});
-  }
-
-  function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-
+  /* ------------------- Boot ------------------- */
   async function boot(){
-    TG.init();            // автологин/автотема в Telegram
-    await loadSettings(); // применяем сохранённые настройки
-    await refreshLibrary();
-    onRoute();
-  }
-  document.addEventListener('DOMContentLoaded', boot);
+    TG.init();
+    // Настройка темы
+    const savedTheme = await Store.getSetting('theme')||'auto';
+    $$('input[name="theme"]').forEach(r=> r.checked = (r.value===savedTheme));
+    applyTheme(savedTheme);
+    $$('input[name="theme"]').forEach(r=> r.addEventListener('change', ()=>{ const v = $$('input[name="theme"]').find(x=>x.checked)?.value||'auto'; applyTheme(v); Store.setSetting('theme', v); }));
 
+    // Предзагрузка примера (можно убрать): если в репозитории лежит /otkrovenie_1.json
+    try{
+      const probe = await fetch('./otkrovenie_1.json', {cache:'no-store'});
+      if (probe.ok){
+        const data = await probe.json();
+        const existing = (await Store.all()).find(x=> x.json?.content_id === data.content_id);
+        if (!existing){ await Store.saveItem(normalizeJSONItem(data,{id:'json-'+uid(), source:'repo', path:'./otkrovenie_1.json'})); }
+      }
+    }catch{/* игнор */}
+
+    await refreshLibrary();
+    showView('library');
+  }
+
+  function applyTheme(v){
+    if (v==='auto'){
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; document.body.setAttribute('data-theme', prefersDark?'dark':'light');
+    } else { document.body.setAttribute('data-theme', v); }
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
 })();
 </script>
 </body>
